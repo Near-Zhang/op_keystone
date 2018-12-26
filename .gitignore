@@ -1,0 +1,13 @@
+### OSX ###
+.DS_Store
+.AppleDouble
+.LSOverride
+
+### Django ###
+*.log
+*.pot
+*.pyc
+__pycache__
+migrations
+venv
+config.py
