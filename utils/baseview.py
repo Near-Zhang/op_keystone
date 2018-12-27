@@ -1,5 +1,6 @@
 from django.views import View
 from django.http import JsonResponse
+from utils.tools import json_loader
 
 
 class BaseView(View):
@@ -28,36 +29,40 @@ class BaseView(View):
             }
         return JsonResponse(dict)
 
-    def get_necessary_opts(self, request_opts, opts_list):
+    def extract_opts(self, request_opts, necessary_opts_list, additional_opts_list):
         """
-        判断请求参数是否包含必要参数，如包含返回必要参数字典
-        :param request_opts: dict, 请求参数字典
-        :param opts_list: list, 必要参数列表
-        :return: tuple, (True, dict) or (False, JsonResponse object)，dict 为必要参数字典
+        从请求参数字典或 json 中提取出必要参数和可选参数，若必要参数缺失返回错误 JsonResponse 对象
+        :param request_opts: dict or str, 请求参数
+        :param necessary_opts_list: list, 必要参数列表
+        :param additional_opts_list: list, 可选参数列表
+        :return: tuple, (response, necessary_opts_dict, additional_opts_dict)
         """
-        opts_dict = {}
-        for k in opts_list:
-            v = request_opts.get(k)
-            if v:
-                opts_dict[k] = v
-            else:
-                message = 'ParamsError:missing params'
-                return False, self.base_json_response(code=400, message=message)
-        return True, opts_dict
+        if not request_opts:
+            message = 'ParamsError:params is none'
+            return self.base_json_response(code=400, message=message), None, None
 
-    def get_additional_opts(self, request_opts, opts_list):
-        """
-        返回请求参数中的附加参数字典
-        :param request_opts: dict, 请求参数字典
-        :param opts_list: list, 附加参数列表
-        :return: dict, 附加参数字典
-        """
-        opts_dict = {}
-        for k in opts_list:
+        if isinstance(request_opts ,str):
+            request_opts = json_loader(request_opts)
+            if not request_opts:
+                message = 'ParamsError:params is not a standard json'
+                return self.base_json_response(code=400, message=message), None, None
+
+        necessary_opts_dict = {}
+        for k in necessary_opts_list:
             v = request_opts.get(k)
-            if v:
-                opts_dict[k] = v
-        return opts_dict
+            if v is not None:
+                necessary_opts_dict[k] = v
+            else:
+                message = 'ParamsError:param %s is missing or none' %k
+                return self.base_json_response(code=400, message=message), None, None
+
+        additional_opts_dict = {}
+        for k in additional_opts_list:
+            v = request_opts.get(k)
+            if v is not None:
+                additional_opts_dict[k] = v
+
+        return None, necessary_opts_dict, additional_opts_dict
 
     def get(self, request):
         message = 'MethodError: %s is not supported by get method' %request.path
