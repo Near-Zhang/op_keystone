@@ -1,31 +1,31 @@
 from utils.viewmixin import BaseViewMixin
 from django.views import View
-from ..models import Project
+from ..models import Domain
 from django.http import QueryDict
 
 
-class ProjectsView(BaseViewMixin, View):
+class DomainsView(BaseViewMixin, View):
     """
-    项目的增、删、改、查
+    域的增、删、改、查
     """
     def get(self, request):
-        project_obj_qs = Project.objects.all()
-        project_dict_list = []
-        for i in project_obj_qs:
-            project_dict_list.append(i.serialize())
+        domain_obj_qs = Domain.objects.all()
+        domain_dict_list = []
+        for i in domain_obj_qs:
+            domain_dict_list.append(i.serialize())
         date = {
-            'total': len(project_dict_list),
-            'date': project_dict_list
+            'total': len(domain_dict_list),
+            'date': domain_dict_list
         }
 
         return self.base_json_response(date)
 
     def post(self, request):
         opts = request.POST.get('opts')
-        project_field = {}
+        domain_field = {}
 
         necessary_opts_list = [
-            'project_name', 'purpose'
+            'name', 'company'
         ]
         additional_opts_list = [
             'enable', 'comment'
@@ -35,17 +35,17 @@ class ProjectsView(BaseViewMixin, View):
         if respond:
             return respond
 
-        project_field.update(necessary_opts)
-        project_field.update(additional_opts)
-        project = Project(**project_field)
+        domain_field.update(necessary_opts)
+        domain_field.update(additional_opts)
 
         try:
-            project.save()
+            domain = Domain(**domain_field)
+            domain.save()
         except:
-            message = 'DatabaseError:failed to save project'
+            message = 'DatabaseError:failed to save domain'
             return self.base_json_response(code=500, message=message)
 
-        return self.base_json_response(project.serialize())
+        return self.base_json_response(domain.serialize())
 
     def put(self, request):
         put_params = QueryDict(request.body)
@@ -53,7 +53,7 @@ class ProjectsView(BaseViewMixin, View):
 
         necessary_opts_list = ['uuid']
         additional_opts_list = [
-            'project_name', 'purpose', 'enable', 'comment'
+            'name', 'purpose', 'enable', 'comment', 'created_by'
         ]
         respond, necessary_opts, additional_opts = self.extract_opts_or_400(opts, necessary_opts_list,
                                                                             additional_opts_list)
@@ -61,21 +61,21 @@ class ProjectsView(BaseViewMixin, View):
             return respond
 
         try:
-            project = Project.objects.get(**necessary_opts)
+            domain = Domain.objects.get(**necessary_opts)
         except:
-            message = 'ParamsError:failed to find project which uuid is %s' % necessary_opts['uuid']
+            message = 'ParamsError:failed to find domain which uuid is %s' % necessary_opts['uuid']
             return self.base_json_response(code=500, message=message)
 
         for i in additional_opts:
-            setattr(project, i, additional_opts[i])
+            setattr(domain, i, additional_opts[i])
 
         try:
-            project.save()
+            domain.save()
         except:
-            message = 'DatabaseError:failed to update project'
+            message = 'DatabaseError:failed to update domain'
             return self.base_json_response(code=500, message=message)
 
-        return self.base_json_response(project.serialize())
+        return self.base_json_response(domain.serialize())
 
     def delete(self, request):
         delete_params = QueryDict(request.body)
@@ -87,15 +87,15 @@ class ProjectsView(BaseViewMixin, View):
             return respond
 
         try:
-            project = Project.objects.get(**necessary_opts)
+            domain = Domain.objects.get(**necessary_opts)
         except:
-            message = 'ParamsError:failed to find project which uuid is %s' % necessary_opts['uuid']
+            message = 'ParamsError:failed to find domain which uuid is %s' % necessary_opts['uuid']
             return self.base_json_response(code=500, message=message)
 
         try:
-            project.delete()
+            domain.delete()
         except:
-            message = 'DatabaseError:failed to delete project'
+            message = 'DatabaseError:failed to delete domain'
             return self.base_json_response(code=500, message=message)
 
-        return self.base_json_response(project.serialize())
+        return self.base_json_response(domain.serialize())

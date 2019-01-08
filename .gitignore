@@ -3,6 +3,9 @@
 .AppleDouble
 .LSOverride
 
+### pycharm ###
+.idea
+
 ### Django ###
 *.log
 *.pot
@@ -11,3 +14,4 @@ __pycache__
 migrations
 venv
 config.py
+
