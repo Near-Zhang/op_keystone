@@ -1,7 +1,8 @@
 
 __all__ = [
     'CustomException', 'MethodNotAllowed', 'LoginFailed',
-    'RequestParamsError', 'ObjectNotExist', 'DatabaseError'
+    'RequestParamsError', 'ObjectNotExist', 'DatabaseError',
+    'CredenceInvalid'
 ]
 
 
@@ -32,6 +33,18 @@ class LoginFailed(CustomException):
     def __init__(self):
         self.code = 403
         exception_message = 'user does not exist or password error'
+        super().__init__(exception_message)
+
+
+class CredenceInvalid(CustomException):
+    """
+    凭证校验无效
+    """
+    def __init__(self, empty=False):
+        self.code = 403
+        exception_message = 'the user or token in the cookie is invalid'
+        if empty:
+            exception_message = 'the user or token in the cookie is required'
         super().__init__(exception_message)
 
 

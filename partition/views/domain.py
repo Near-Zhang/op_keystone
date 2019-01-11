@@ -13,9 +13,17 @@ class DomainsView(BaseView):
 
     def get(self, request):
         try:
+            # 获取 uuid 参数，若有则为单个对象获取
+            uuid_opts = ['uuid']
+            request_params = self.get_params_dict(request, nullable=True)
+            uuid_opts_dict = self.extract_opts(request_params, uuid_opts, necessary=False)
+
+            if uuid_opts_dict:
+                obj = self.domain_model.get_object(**uuid_opts_dict)
+                return self.standard_response(obj.serialize())
+
             # 页码参数提取
             page_opts = ['page', 'pagesize']
-            request_params = self.get_params_dict(request, nullable=True)
             page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
 
             # 当前页数据列获取

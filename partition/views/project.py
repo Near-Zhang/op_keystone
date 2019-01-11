@@ -56,7 +56,7 @@ class ProjectsView(BaseView):
             necessary_opts = ['uuid']
             extra_opts = [
                 'name', 'purpose', 'enable',
-                'domain', 'comment'
+                'comment'
             ]
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)

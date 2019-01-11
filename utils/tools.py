@@ -125,8 +125,9 @@ def paging_list(total_list, page=1, pagesize=20):
     :return: dict, 包含数据总数、当前页数据列表的字典
     """
     total = len(total_list)
-    start_index = (page - 1) * pagesize
-    end_index = start_index + pagesize
+    start_index = (int(page) - 1) * int(pagesize)
+    end_index = start_index + int(pagesize)
+    print(start_index, end_index)
     current_page_list = total_list[start_index:end_index]
 
     return {
