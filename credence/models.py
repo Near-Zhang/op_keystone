@@ -1,5 +1,5 @@
 from django.db import models
-from utils.tools import datetime_convert
+from utils.tools import datetime_to_humanized
 
 
 class Token(models.Model):
@@ -14,7 +14,7 @@ class Token(models.Model):
     expire_date = models.DateTimeField(verbose_name='过期时间')
 
     def __str__(self):
-        return '{"user": "%s", "expire_date": "%s", }' %(self.user, datetime_convert(self.expire_date))
+        return '{"user": "%s", "expire_date": "%s", }' %(self.user, datetime_to_humanized(self.expire_date))
 
     def serialize(self):
         """
@@ -23,6 +23,6 @@ class Token(models.Model):
         """
         d = self.__dict__.copy()
         del d['_state']
-        d['expire_date'] = datetime_convert(d['expire_date'])
+        d['expire_date'] = datetime_to_humanized(d['expire_date'])
         return d
 

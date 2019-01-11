@@ -119,5 +119,5 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# defined login url
-LOGIN_URL = '/identity/login/'
+# token continuous valid time, unit minutes
+TOKEN_VALID_TIME = 60

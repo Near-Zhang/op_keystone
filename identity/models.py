@@ -1,21 +1,18 @@
 from django.db import models
-from utils.tools import (
-    datetime_convert, password_hash, generate_unique_uuid
-)
+from utils import tools
 
 
 class User(models.Model):
 
     class Meta:
-        verbose_name = '主用户'
-        db_table = 'main_user'
+        verbose_name = '用户'
+        db_table = 'user'
         unique_together = ('domain', 'username')
 
     # 逻辑生成字段
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
     created_by = models.CharField(max_length=32, verbose_name='创建用户')
     updated_by = models.CharField(max_length=32, null=True, verbose_name='修改用户')
-    last_time = models.DateTimeField(null=True, verbose_name='最近登陆时间')
 
     # 必要字段
     email = models.CharField(max_length=64, unique=True, verbose_name='邮箱')
@@ -29,7 +26,7 @@ class User(models.Model):
     is_main = models.BooleanField(default=False, verbose_name='是否为主用户')
     enable =  models.BooleanField(default=True, verbose_name='是否可用')
     qq = models.CharField(max_length=16, null=True, verbose_name='QQ')
-    comment = models.CharField(max_length=200, null=True, verbose_name='备注')
+    comment = models.CharField(max_length=256, null=True, verbose_name='备注')
 
     # 自动生成字段
     created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
@@ -43,7 +40,7 @@ class User(models.Model):
         """
         super().__init__(*args, **kwargs)
         if not self.uuid:
-            self.uuid = generate_unique_uuid()
+            self.uuid = tools.generate_unique_uuid()
 
     def __str__(self):
         return '{"uuid"："%s", "name": "%s"}' %(self.uuid, self.name)
@@ -57,8 +54,8 @@ class User(models.Model):
         del d['_state']
         del d['password']
 
-        for i in ['created_time', 'updated_time', 'last_time']:
-            d[i] = datetime_convert(d[i])
+        for i in ['created_time', 'updated_time']:
+            d[i] = tools.datetime_to_humanized(d[i])
         return d
 
     def check_password(self, password):
@@ -67,8 +64,33 @@ class User(models.Model):
         :param password: str, 密码
         :return: bool
         """
-        pw_hash = password_hash(password)
+        pw_hash = tools.password_to_hash(password)
         if pw_hash != self.password:
             return False
         return True
+
+
+class UserBehavior(models.Model):
+
+    class Meta:
+        verbose_name = '用户行为'
+        db_table = 'user_behavior'
+
+    # 逻辑生成字段
+    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
+    last_time = models.DateTimeField(null=True, verbose_name='上次登陆时间')
+
+
+    def serialize(self):
+        """
+        对象序列化
+        :return: dict
+        """
+        d = self.__dict__.copy()
+        del d['_state']
+
+        for i in ['last_time']:
+            d[i] = tools.datetime_to_humanized(d[i])
+        return d
+
 

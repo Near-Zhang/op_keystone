@@ -1,6 +1,6 @@
 from django.db import models
 from utils.tools import (
-    datetime_convert, generate_unique_uuid
+    datetime_to_humanized, generate_unique_uuid
 )
 
 
@@ -39,7 +39,7 @@ class Domain(models.Model):
         del d['_state']
 
         for i in ['created_time', 'updated_time']:
-            d[i] = datetime_convert(d[i])
+            d[i] = datetime_to_humanized(d[i])
         return d
 
     def __init__(self, *args, **kwargs):
@@ -64,10 +64,10 @@ class Project(models.Model):
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
     created_by = models.CharField(max_length=32, verbose_name='创建用户')
     updated_by = models.CharField(max_length=32, null=True, verbose_name='修改用户')
-    domain = models.CharField(max_length=32, verbose_name='归属域')
 
     # 必要字段
     name = models.CharField(max_length=64, unique=True, verbose_name='项目名')
+    domain = models.CharField(max_length=32, verbose_name='归属域')
     purpose = models.CharField(max_length=256, verbose_name='用途')
 
     # 附加字段
@@ -90,7 +90,7 @@ class Project(models.Model):
         del d['_state']
 
         for i in ['created_time', 'updated_time']:
-            d[i] = datetime_convert(d[i])
+            d[i] = datetime_to_humanized(d[i])
         return d
 
     def __init__(self, *args, **kwargs):

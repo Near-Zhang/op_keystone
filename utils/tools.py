@@ -1,3 +1,4 @@
+from op_keystone.exceptions import *
 from pytz import timezone
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -5,6 +6,7 @@ from importlib import import_module
 import hashlib
 import json
 import uuid
+import time
 
 
 def get_datetime_with_tz(datetime_obj=None, **kwargs):
@@ -25,9 +27,9 @@ def get_datetime_with_tz(datetime_obj=None, **kwargs):
     return datetime_with_tz
 
 
-def datetime_convert(datetime_obj=None):
+def datetime_to_humanized(datetime_obj=None):
     """
-    转换 datetime object 为指定时区的人性化显示时间
+    转换 datetime object 为指定时区的人性化显示
     :param datetime_obj: datetime object
     :return: str
     """
@@ -35,7 +37,20 @@ def datetime_convert(datetime_obj=None):
     return datetime_with_tz.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def password_hash(password):
+def datetime_to_timestamp(datetime_obj=None):
+    """
+    转换 datetime object 为时间戳
+    :param datetime_obj: datetime object
+    :return: int, 时间戳
+    """
+    if not datetime_obj:
+        return time.time()
+
+    timetup = datetime_obj.timetuple()
+    return time.mktime(timetup)
+
+
+def password_to_hash(password):
     """
     对密码进行加盐哈希
     :param password: str or int, 密码
@@ -49,22 +64,21 @@ def password_hash(password):
 
 def json_loader(json_str):
     """
-    反序列化 json 字符串并返回结果, 若不是标准 json 返回错误 JsonResponse 对象
+    反序列化 json 字符串并返回结果
     :param json_str: json 字符串
     :return: dict
     """
     if not json_str:
         return {}
     try:
-        d = json.loads(json_str)
+        return json.loads(json_str)
     except ValueError:
-        d = {}
-    return d
+        return {}
 
 
 def generate_mapping_uuid(namespace_hex, mapping_str):
     """
-    获取指定命名空间和字符串映射的 uuid
+    获取命名空间和字符串映射的 uuid
     :param namespace_hex: str, 命名空间十六进制 uuid
     :param mapping_str: str, 映射的字符串
     :return: str, 十六进制 uuid
@@ -101,3 +115,21 @@ def import_string(dotted_path):
     except AttributeError:
         return None
 
+
+def paging_list(total_list, page=1, pagesize=20):
+    """
+     对于总数据列表进行分页，并返回当前页的数据列表
+    :param total_list: list, 数据总列表
+    :param page: int, 页数
+    :param pagesize: int, 页大小
+    :return: dict, 包含数据总数、当前页数据列表的字典
+    """
+    total = len(total_list)
+    start_index = (page - 1) * pagesize
+    end_index = start_index + pagesize
+    current_page_list = total_list[start_index:end_index]
+
+    return {
+        'total': total,
+        'data': current_page_list
+    }
