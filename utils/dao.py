@@ -14,9 +14,9 @@ class DAO:
             model = tools.import_string(model)
         self.model = model
 
-    def get_object(self, **kwargs):
+    def get_obj(self, **kwargs):
         """
-        从模型中获取单个对象
+        从模型中过滤并获取单个对象
         :param kwargs: 过滤参数
         :return: model object
         """
@@ -27,7 +27,7 @@ class DAO:
 
     def get_obj_qs(self, **kwargs):
         """
-        从模型中获取包含对象的查询集
+        从模型中过滤并获取包含对象的查询集
         :param kwargs: dict, 过滤参数
         :return: query set
         """
@@ -35,7 +35,7 @@ class DAO:
 
     def get_dict_list(self, **kwargs):
         """
-        从模型中获取包含对象序列化成的字典的列表，用于返回响应
+        从模型中过滤并获取包含对象序列化字典的列表，用于返回响应
         :param kwargs: dict, 过滤参数
         :return: list, [dict, ...]
         """
@@ -45,7 +45,34 @@ class DAO:
             dict_list.append(obj.serialize())
         return dict_list
 
+    def get_field_list(self, field, **kwargs):
+        """
+        从模型中过滤并获取包含对象指定列的序列化字典的列表
+        :param field: str, 列名
+        :param kwargs: dict, 过滤参数
+        :return: list, [str,...]
+        """
+        obj_qs = self.get_obj_qs(**kwargs)
+        field_list = []
+        for obj in obj_qs:
+            field_list.append(getattr(obj, field))
+        return field_list
+
     def create_obj(self, **kwargs):
+        """
+        创建一个对象到模型中
+        :param kwargs: dict, 列参数
+        :return: model object
+        """
+        try:
+            obj = self.model(**kwargs)
+            obj.save()
+        except Error as e:
+            msg = e.args[1]
+            raise DatabaseError(msg, self.model.__name__) from e
+        return obj
+
+    def create_multi_obj_or_rollback(self, **kwargs):
         """
         创建一个对象到模型中
         :param kwargs: dict, 列参数
@@ -75,12 +102,15 @@ class DAO:
             raise DatabaseError(msg, self.model.__name__) from e
         return obj
 
-    @staticmethod
-    def delete_obj(obj):
+    def delete_obj(self, **kwargs):
         """
-        从模型中删除一个对象
-        :param obj: model object, 对象
+        从模型中过滤并删除单个对象
+        :param kwargs: 过滤参数
         :return: model object
         """
+        obj = self.get_obj(**kwargs)
         obj.delete()
+
         return obj
+
+

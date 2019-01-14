@@ -19,7 +19,7 @@ class DomainsView(BaseView):
             uuid_opts_dict = self.extract_opts(request_params, uuid_opts, necessary=False)
 
             if uuid_opts_dict:
-                obj = self.domain_model.get_object(**uuid_opts_dict)
+                obj = self.domain_model.get_obj(**uuid_opts_dict)
                 return self.standard_response(obj.serialize())
 
             # 页码参数提取
@@ -68,7 +68,7 @@ class DomainsView(BaseView):
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
             # 对象获取
-            obj = self.domain_model.get_object(**necessary_opts_dict)
+            obj = self.domain_model.get_obj(**necessary_opts_dict)
 
             # 对象更新
             extra_opts_dict['updated_by'] = request.user.uuid
@@ -87,12 +87,9 @@ class DomainsView(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
             # 对象获取
-            obj = self.domain_model.get_object(**necessary_opts_dict)
+            deleted_obj = self.domain_model.delete_obj(**necessary_opts_dict)
 
-            # 对象删除
-            deleted_obj = self.domain_model.delete_obj(obj)
-
-            return self.standard_response(deleted_obj.serialize())
+            return self.standard_response('succeed to delete %s' % deleted_obj.name)
 
         except CustomException as e:
             return self.exception_to_response(e)

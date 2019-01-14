@@ -38,7 +38,7 @@ class LoginView(BaseView):
             # domain 参数额外处理
             if necessary_opts_dict.get('domain'):
                 domain_name = necessary_opts_dict.pop('domain')
-                domain = self.domain_model.get_object(name=domain_name)
+                domain = self.domain_model.get_obj(name=domain_name)
                 necessary_opts_dict['domain'] = domain.uuid
 
             # 取出密码
@@ -46,13 +46,13 @@ class LoginView(BaseView):
 
             # 获取用户并校验密码
             try:
-                user = self.user_model.get_object(**necessary_opts_dict)
+                user = self.user_model.get_obj(**necessary_opts_dict)
                 if not user.check_password(password):
                     raise LoginFailed()
 
                 # 更新用户行为
                 now = tools.get_datetime_with_tz()
-                behavior_obj = self.user_behavior_model.get_object(uuid=user.uuid)
+                behavior_obj = self.user_behavior_model.get_obj(uuid=user.uuid)
                 self.user_behavior_model.update_obj(behavior_obj, last_time=now)
 
                 # 生成 token 和 expire_date
@@ -61,7 +61,7 @@ class LoginView(BaseView):
 
                 # 获取用户 token 对象
                 try:
-                    token_obj = self.token_model.get_object(user=user.uuid)
+                    token_obj = self.token_model.get_obj(user=user.uuid)
                 except CustomException:
                     # 不存在新建
                     self.token_model.create_obj(user=user.uuid, token=token, expire_date=expire_date)
@@ -97,7 +97,7 @@ class LogoutView(BaseView):
         try:
             # 通过用户获取 token 对象
             user = request.user
-            token_ins = self.token_model.get_object(user=user.uuid)
+            token_ins = self.token_model.get_obj(user=user.uuid)
 
             # 更新 token 对象
             expire_date = tools.get_datetime_with_tz()

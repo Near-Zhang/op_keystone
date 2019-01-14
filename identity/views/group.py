@@ -19,7 +19,7 @@ class GroupsView(BaseView):
             uuid_opts_dict = self.extract_opts(request_params, uuid_opts, necessary=False)
 
             if uuid_opts_dict:
-                obj = self.group_model.get_object(**uuid_opts_dict)
+                obj = self.group_model.get_obj(**uuid_opts_dict)
                 return self.standard_response(obj.serialize())
 
             # 页码参数提取
@@ -48,7 +48,6 @@ class GroupsView(BaseView):
             obj_field = {}
             obj_field.update(necessary_opts_dict)
             obj_field.update(extra_opts_dict)
-            print(request.user)
             obj_field['created_by'] = request.user.uuid
 
             # 创建用户对象
@@ -69,7 +68,7 @@ class GroupsView(BaseView):
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
             # 对象获取
-            obj = self.group_model.get_object(**necessary_opts_dict)
+            obj = self.group_model.get_obj(**necessary_opts_dict)
 
             # 对象更新
             extra_opts_dict['updated_by'] = request.user.uuid
@@ -87,13 +86,10 @@ class GroupsView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            # 对象获取
-            obj = self.group_model.get_object(**necessary_opts_dict)
-
             # 对象删除
-            deleted_obj = self.group_model.delete_obj(obj)
+            deleted_obj = self.group_model.delete_obj(**necessary_opts_dict)
 
-            return self.standard_response(deleted_obj.serialize())
+            return self.standard_response('succeed to delete %s' % deleted_obj.name)
 
         except CustomException as e:
             return self.exception_to_response(e)

@@ -20,7 +20,7 @@ class UsersView(BaseView):
             uuid_opts_dict = self.extract_opts(request_params, uuid_opts, necessary=False)
 
             if uuid_opts_dict:
-                obj = self.user_model.get_object(**uuid_opts_dict)
+                obj = self.user_model.get_obj(**uuid_opts_dict)
                 return self.standard_response(obj.serialize())
 
             # 页码参数提取
@@ -81,7 +81,7 @@ class UsersView(BaseView):
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
             # 对象获取
-            obj = self.user_model.get_object(**necessary_opts_dict)
+            obj = self.user_model.get_obj(**necessary_opts_dict)
 
             # 对象更新
             password = extra_opts_dict.get('password')
@@ -102,15 +102,11 @@ class UsersView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            # 对象获取
-            obj = self.user_model.get_object(**necessary_opts_dict)
-            behavior_obj = self.user_behavior_model.get_object(**necessary_opts_dict)
-
             # 对象删除
-            deleted_obj = self.user_model.delete_obj(obj)
-            self.user_behavior_model.delete_obj(behavior_obj)
+            delete_obj = self.user_model.delete_obj(**necessary_opts_dict)
+            self.user_behavior_model.delete_obj(**necessary_opts_dict)
 
-            return self.standard_response(deleted_obj.serialize())
+            return self.standard_response('succeed to delete %s' % delete_obj.name)
 
         except CustomException as e:
             return self.exception_to_response(e)

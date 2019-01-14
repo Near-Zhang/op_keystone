@@ -31,7 +31,7 @@ class AuthMiddleware(MiddlewareMixin):
         now = get_datetime_with_tz()
         expire_date = get_datetime_with_tz(token.expire_date)
         if now > expire_date:
-            raise CredenceInvalid()
+            raise CustomException()
 
     def process_request(self, request):
 
@@ -46,13 +46,17 @@ class AuthMiddleware(MiddlewareMixin):
             if not rq_uuid or not rq_token:
                 raise CredenceInvalid(empty=True)
 
-            token = self.token_model.get_object(user=rq_uuid, token=rq_token)
-            self.check_token_valid(token)
-            user = self.user_model.get_object(uuid=rq_uuid)
-            if not user.enable:
-                raise CustomException()
-            request.user = user
-            return
+            try:
+                token = self.token_model.get_obj(user=rq_uuid, token=rq_token)
+                self.check_token_valid(token)
+                user = self.user_model.get_obj(uuid=rq_uuid)
+                if not user.enable:
+                    raise CustomException()
+                request.user = user
+                return
 
-        except CustomException as e:
+            except CustomException:
+                raise CredenceInvalid()
+
+        except CredenceInvalid as e:
             return self.error_json_respond(e)

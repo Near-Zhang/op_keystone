@@ -1,4 +1,3 @@
-from op_keystone.exceptions import *
 from pytz import timezone
 from datetime import datetime, timedelta
 from django.conf import settings
@@ -127,10 +126,11 @@ def paging_list(total_list, page=1, pagesize=20):
     total = len(total_list)
     start_index = (int(page) - 1) * int(pagesize)
     end_index = start_index + int(pagesize)
-    print(start_index, end_index)
     current_page_list = total_list[start_index:end_index]
 
     return {
         'total': total,
         'data': current_page_list
     }
+
+

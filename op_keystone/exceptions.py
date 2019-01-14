@@ -10,6 +10,7 @@ class CustomException(Exception):
     """
     自定义异常类，修改了打印时的显示方式
     """
+
     def __message__(self):
         exception_message = self.args[0]
         exception_class = self.__class__.__name__
