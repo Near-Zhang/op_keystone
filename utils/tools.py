@@ -45,8 +45,8 @@ def datetime_to_timestamp(datetime_obj=None):
     if not datetime_obj:
         return time.time()
 
-    timetup = datetime_obj.timetuple()
-    return time.mktime(timetup)
+    timetuple = datetime_obj.timetuple()
+    return time.mktime(timetuple)
 
 
 def password_to_hash(password):

@@ -12,7 +12,7 @@ class User(models.Model):
     # 逻辑生成字段
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
     created_by = models.CharField(max_length=32, verbose_name='创建用户')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='修改用户')
+    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户')
 
     # 必要字段
     email = models.CharField(max_length=64, unique=True, verbose_name='邮箱')
@@ -103,7 +103,7 @@ class Group(models.Model):
     # 逻辑生成字段
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
     created_by = models.CharField(max_length=32, verbose_name='创建用户')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='修改用户')
+    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户')
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='组名')
