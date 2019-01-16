@@ -1,4 +1,4 @@
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
 from django.db.utils import Error
 from op_keystone.exceptions import *
 from utils import tools
@@ -12,6 +12,16 @@ class DAO:
     def __init__(self, model):
         if isinstance(model, str):
             model = tools.import_string(model)
+
+        # 如果模型使用了软删除，则查询时添加未软删除过滤
+        try:
+            model._meta.get_field('deleted_time')
+            self.not_soft_deleted = {
+                "deleted_time__isnull": True
+            }
+        except FieldDoesNotExist:
+            self.not_soft_deleted = {}
+
         self.model = model
 
     def get_obj(self, **kwargs):
@@ -21,7 +31,7 @@ class DAO:
         :return: model object
         """
         try:
-            return self.model.objects.get(**kwargs)
+            return self.model.objects.get(**self.not_soft_deleted, **kwargs)
         except ObjectDoesNotExist as e:
             raise ObjectNotExist(self.model.__name__) from e
 
@@ -31,7 +41,7 @@ class DAO:
         :param kwargs: dict, 过滤参数
         :return: query set
         """
-        return self.model.objects.filter(**kwargs)
+        return self.model.objects.filter(**self.not_soft_deleted, **kwargs)
 
     def get_dict_list(self, **kwargs):
         """

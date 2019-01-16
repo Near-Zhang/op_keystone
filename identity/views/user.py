@@ -103,10 +103,15 @@ class UsersView(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
             # 对象删除
-            delete_obj = self.user_model.delete_obj(**necessary_opts_dict)
+            obj = self.user_model.get_obj(**necessary_opts_dict)
+            soft_deleted_dict = {
+                'deleted_time': tools.get_datetime_with_tz(),
+                'deleted_by': request.user.uuid
+            }
+            deleted_obj = self.user_model.update_obj(obj, **soft_deleted_dict)
             self.user_behavior_model.delete_obj(**necessary_opts_dict)
 
-            return self.standard_response('succeed to delete %s' % delete_obj.name)
+            return self.standard_response('succeed to delete %s' % deleted_obj.name)
 
         except CustomException as e:
             return self.exception_to_response(e)

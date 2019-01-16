@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'identity',
     'partition',
-    'credence'
+    'credence',
+    'catalog'
 ]
 
 MIDDLEWARE = [

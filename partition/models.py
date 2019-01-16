@@ -20,6 +20,7 @@ class Domain(models.Model):
     company = models.CharField(max_length=64, verbose_name='公司')
 
     # 附加字段
+    is_main = models.BooleanField(default=False, verbose_name='是否为主域')
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注信息')
 

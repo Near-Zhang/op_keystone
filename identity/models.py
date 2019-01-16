@@ -7,30 +7,34 @@ class User(models.Model):
     class Meta:
         verbose_name = '用户'
         db_table = 'user'
-        unique_together = ('domain', 'username')
-
-    # 逻辑生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户')
+        unique_together = [
+            ('domain', 'username', 'deleted_time'),
+            ('phone', 'deleted_time'),
+            ('email', 'deleted_time')
+        ]
 
     # 必要字段
-    email = models.CharField(max_length=64, unique=True, verbose_name='邮箱')
-    phone = models.CharField(max_length=16, unique=True, verbose_name='手机')
+    email = models.CharField(max_length=64, verbose_name='邮箱')
+    phone = models.CharField(max_length=16, verbose_name='手机')
     username = models.CharField(max_length=64, verbose_name='登陆名')
     domain = models.CharField(max_length=32, verbose_name='归属域')
     password = models.CharField(max_length=64, verbose_name='密码')
     name = models.CharField(max_length=64, verbose_name='用户姓名')
 
     # 附加字段
-    is_main = models.BooleanField(default=False, verbose_name='是否为主用户')
-    enable =  models.BooleanField(default=True, verbose_name='是否可用')
+    is_main = models.BooleanField(default=False, verbose_name='是否主用户')
+    enable = models.BooleanField(default=True, verbose_name='是否可用')
     qq = models.CharField(max_length=16, null=True, verbose_name='QQ')
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
 
     # 自动生成字段
+    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
+    created_by = models.CharField(max_length=32, verbose_name='创建的用户')
     created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新的用户')
     updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    deleted_by = models.CharField(max_length=32, null=True, verbose_name='删除的用户')
+    deleted_time = models.DateTimeField(null=True, verbose_name='删除时间')
 
     def __init__(self, *args, **kwargs):
         """
@@ -42,9 +46,6 @@ class User(models.Model):
         if not self.uuid:
             self.uuid = tools.generate_unique_uuid()
 
-    def __str__(self):
-        return '{"uuid"："%s", "name": "%s"}' %(self.uuid, self.name)
-
     def serialize(self):
         """
         对象序列化
@@ -54,8 +55,9 @@ class User(models.Model):
         del d['_state']
         del d['password']
 
-        for i in ['created_time', 'updated_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
+        for i in ['created_time', 'updated_time', 'deleted_time']:
+            if not d[i] is None:
+                d[i] = tools.datetime_to_humanized(d[i])
         return d
 
     def check_password(self, password):
@@ -65,9 +67,8 @@ class User(models.Model):
         :return: bool
         """
         pw_hash = tools.password_to_hash(password)
-        if pw_hash != self.password:
-            return False
-        return True
+        if pw_hash == self.password:
+            return True
 
 
 class UserBehavior(models.Model):
@@ -89,7 +90,8 @@ class UserBehavior(models.Model):
         del d['_state']
 
         for i in ['last_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
+            if not d[i] is None:
+                d[i] = tools.datetime_to_humanized(d[i])
         return d
 
 
@@ -100,11 +102,6 @@ class Group(models.Model):
         db_table = 'group'
         unique_together = ('domain', 'name')
 
-    # 逻辑生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户')
-
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='组名')
     domain = models.CharField(max_length=32, verbose_name='归属域')
@@ -114,7 +111,10 @@ class Group(models.Model):
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
 
     # 自动生成字段
+    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
+    created_by = models.CharField(max_length=32, verbose_name='创建的用户')
     created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新的用户')
     updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
     def __init__(self, *args, **kwargs):
@@ -127,9 +127,6 @@ class Group(models.Model):
         if not self.uuid:
             self.uuid = tools.generate_unique_uuid()
 
-    def __str__(self):
-        return '{"uuid"："%s", "name": "%s"}' %(self.uuid, self.name)
-
     def serialize(self):
         """
         对象序列化
@@ -139,7 +136,8 @@ class Group(models.Model):
         del d['_state']
 
         for i in ['created_time', 'updated_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
+            if not d[i] is None:
+                d[i] = tools.datetime_to_humanized(d[i])
         return d
 
 
