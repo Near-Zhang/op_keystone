@@ -13,5 +13,8 @@
 __pycache__
 migrations
 venv
-config.py
 
+
+### custom ###
+GeoLite2-City.mmdb
+config.py

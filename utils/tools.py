@@ -6,6 +6,8 @@ import hashlib
 import json
 import uuid
 import time
+import geoip2.database
+
 
 
 def get_datetime_with_tz(datetime_obj=None, **kwargs):
@@ -64,7 +66,7 @@ def password_to_hash(password):
 def json_loader(json_str):
     """
     反序列化 json 字符串并返回结果
-    :param json_str: json 字符串
+    :param json_str: str|byte, json 形式
     :return: dict
     """
     if not json_str:
@@ -132,5 +134,30 @@ def paging_list(total_list, page=1, pagesize=20):
         'total': total,
         'data': current_page_list
     }
+
+
+def ip_to_location(ip_addr):
+    """
+    解析 IP 为其对应的物理位置
+    :param ip_addr: str, IP 地址
+    :return: tuple
+    """
+    reader = geoip2.database.Reader('utils/geoip/GeoLite2-City.mmdb')
+    response = reader.city(ip_addr)
+
+    location_list = []
+    for k in ['continent', 'country', 'subdivisions', 'city']:
+        try:
+            attr = getattr(response, k)
+            try:
+                name_dict = attr.names
+            except AttributeError:
+                name_dict = attr[0].names
+            v = name_dict.get('zh-CN', None)
+            location_list.append(v)
+        except (AttributeError, IndexError):
+            location_list.append(None)
+
+    return location_list
 
 

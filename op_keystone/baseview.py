@@ -1,6 +1,5 @@
 from op_keystone.exceptions import *
 from django.views import View
-from django.http.request import QueryDict
 from django.http import JsonResponse
 from utils.tools import json_loader
 
@@ -38,10 +37,12 @@ class BaseView(View):
         """
         try:
             if request.method.lower() in self.http_method_names:
-                handler = getattr(self, request.method.lower())
-                if handler:
+                try:
+                    handler = getattr(self, request.method.lower())
+                except AttributeError:
+                    raise MethodNotAllowed(request.method.lower(), request.path)
+                else:
                     return handler(request, *args, **kwargs)
-            raise MethodNotAllowed(request.method.lower(), request.path)
         except MethodNotAllowed as e:
             return self.exception_to_response(e)
 
@@ -66,12 +67,12 @@ class BaseView(View):
         if request.method == 'GET':
             request_params = request.GET
         else:
-            request_params = QueryDict(request.body).get('params')
+            request_params = request.body
 
         if not request_params and not nullable:
             raise RequestParamsError(empty=True)
 
-        if isinstance(request_params, str):
+        if not isinstance(request_params, dict):
             request_params = json_loader(request_params)
             if not request_params:
                 raise RequestParamsError()

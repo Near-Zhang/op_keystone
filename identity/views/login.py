@@ -52,8 +52,16 @@ class LoginView(BaseView):
 
                 # 更新用户行为
                 now = tools.get_datetime_with_tz()
+                remote_ip = request.META.get('REMOTE_ADDR')
+                location = tools.ip_to_location(remote_ip)
+                print(remote_ip)
+                print(location)
                 behavior_obj = self.user_behavior_model.get_obj(uuid=user.uuid)
-                self.user_behavior_model.update_obj(behavior_obj, last_time=now)
+                behavior_dict = {
+                    'last_ip': request.META.get('REMOTE_ADDR'),
+                    'last_time': now
+                }
+                self.user_behavior_model.update_obj(behavior_obj, **behavior_dict)
 
                 # 生成 token 和 expire_date
                 token = tools.generate_mapping_uuid(user.domain, user.username + tools.datetime_to_humanized(now))

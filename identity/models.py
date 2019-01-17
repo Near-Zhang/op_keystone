@@ -80,6 +80,7 @@ class UserBehavior(models.Model):
     # 逻辑生成字段
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
     last_time = models.DateTimeField(null=True, verbose_name='上次登陆时间')
+    last_ip = models.CharField(max_length=16, null=True, verbose_name='上次登陆IP')
 
     def serialize(self):
         """
