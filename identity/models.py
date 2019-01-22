@@ -1,5 +1,7 @@
 from django.db import models
-from utils import tools
+from op_keystone.exceptions import *
+from django.contrib.auth.password_validation import validate_password as v_password
+from django.core.exceptions import ValidationError
 
 
 class User(models.Model):
@@ -38,7 +40,7 @@ class User(models.Model):
 
     def __init__(self, *args, **kwargs):
         """
-        实例构建后生成唯一 uuid
+        在实例构建后创生成唯一 uuid
         :param args:
         :param kwargs:
         """
@@ -67,8 +69,20 @@ class User(models.Model):
         :return: bool
         """
         pw_hash = tools.password_to_hash(password)
-        if pw_hash == self.password:
-            return True
+        if pw_hash != self.password:
+            raise PasswordError
+
+    def validate_password(self):
+        """
+        进行密码合法校验，成功则进行加盐哈希并返回 True
+        :return: bool
+        """
+        try:
+            v_password(self.password, self)
+        except ValidationError as e:
+            raise PasswordInvalid(e)
+        else:
+            self.password = tools.password_to_hash(self.password)
 
 
 class UserBehavior(models.Model):
@@ -81,6 +95,7 @@ class UserBehavior(models.Model):
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
     last_time = models.DateTimeField(null=True, verbose_name='上次登陆时间')
     last_ip = models.CharField(max_length=16, null=True, verbose_name='上次登陆IP')
+    last_location = models.CharField(max_length=32, null=True, verbose_name='上次登陆地址')
 
     def serialize(self):
         """

@@ -1,5 +1,5 @@
 from op_keystone.exceptions import *
-from op_keystone.baseview import BaseView
+from op_keystone.base_view import BaseView
 from utils import tools
 from utils.dao import DAO
 from django.conf import settings
@@ -44,22 +44,20 @@ class LoginView(BaseView):
             # 取出密码
             password = necessary_opts_dict.pop('password')
 
-            # 获取用户并校验密码
+            # 获取用户并校验密码，然后进行登陆成功的后续操作
             try:
                 user = self.user_model.get_obj(**necessary_opts_dict)
-                if not user.check_password(password):
-                    raise LoginFailed()
+                user.check_password(password)
 
                 # 更新用户行为
                 now = tools.get_datetime_with_tz()
                 remote_ip = request.META.get('REMOTE_ADDR')
                 location = tools.ip_to_location(remote_ip)
-                print(remote_ip)
-                print(location)
                 behavior_obj = self.user_behavior_model.get_obj(uuid=user.uuid)
                 behavior_dict = {
-                    'last_ip': request.META.get('REMOTE_ADDR'),
-                    'last_time': now
+                    'last_time': now,
+                    'last_ip': remote_ip,
+                    'last_location': location
                 }
                 self.user_behavior_model.update_obj(behavior_obj, **behavior_dict)
 
@@ -115,3 +113,42 @@ class LogoutView(BaseView):
 
         except CustomException as e:
             return self.exception_to_response(e)
+
+
+class PasswordView(BaseView):
+    """
+    用户密码修改
+    """
+    user_model = DAO('identity.models.User')
+    token_model = DAO('credence.models.Token')
+
+    def put(self, request):
+        try:
+            # 参数提取
+            necessary_opts = ['origin_password', 'password']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 对象获取和原密码校验
+            user = request.user
+            origin_password = necessary_opts_dict.pop('origin_password')
+            user.check_password(origin_password)
+
+            # user 对象更新
+            necessary_opts_dict['updated_by'] = request.user.uuid
+            for k in necessary_opts_dict:
+                setattr(user, k, necessary_opts_dict[k])
+            user.validate_password()
+            self.user_model.save(user)
+
+            # 获取和更新 token 对象
+            user = request.user
+            token_ins = self.token_model.get_obj(user=user.uuid)
+            expire_date = tools.get_datetime_with_tz()
+            self.token_model.update_obj(token_ins, expire_date=expire_date)
+
+            return self.standard_response('succeed to change password')
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+

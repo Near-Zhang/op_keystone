@@ -1,5 +1,6 @@
 from django.utils.deprecation import MiddlewareMixin
 from op_keystone.exceptions import *
+from op_keystone.base_view import BaseView
 from utils.tools import get_datetime_with_tz
 from utils.dao import DAO
 from django.http.response import JsonResponse
@@ -13,8 +14,8 @@ class AuthMiddleware(MiddlewareMixin):
     user_model = DAO('identity.models.User')
     token_model = DAO('credence.models.Token')
 
-    path_white_list = [
-        '/identity/login/'
+    route_white_list = [
+        ('/identity/login/', 'post')
     ]
 
     @staticmethod
@@ -36,7 +37,8 @@ class AuthMiddleware(MiddlewareMixin):
     def process_request(self, request):
 
         # 白名单路由处理
-        if request.path in self.path_white_list:
+        request_route = (request.path, request.method.lower())
+        if request_route in self.route_white_list:
             return
 
         # 登陆凭证检查
@@ -59,4 +61,4 @@ class AuthMiddleware(MiddlewareMixin):
                 raise CredenceInvalid()
 
         except CredenceInvalid as e:
-            return self.error_json_respond(e)
+            return BaseView().exception_to_response(e)

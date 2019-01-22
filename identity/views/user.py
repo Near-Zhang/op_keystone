@@ -1,5 +1,5 @@
 from op_keystone.exceptions import CustomException
-from op_keystone.baseview import BaseView
+from op_keystone.base_view import BaseView
 from utils import tools
 from utils.dao import DAO
 
@@ -56,10 +56,11 @@ class UsersView(BaseView):
             obj_field.update(necessary_opts_dict)
             obj_field.update(extra_opts_dict)
             obj_field['created_by'] = request.user.uuid
-            obj_field['password'] = tools.password_to_hash(obj_field['password'])
 
-            # 创建用户对象，并创建其行为对象
-            obj = self.user_model.create_obj(**obj_field)
+            # 创建用户对象，并创建其行为对象，密码需要处理
+            obj = self.user_model.model(**obj_field)
+            obj.validate_password()
+            self.user_model.save(obj)
             self.user_behavior_model.create_obj(uuid=obj.uuid)
 
             return self.standard_response(obj.serialize())
@@ -72,9 +73,9 @@ class UsersView(BaseView):
             # 参数提取
             necessary_opts = ['uuid']
             extra_opts = [
-                'password', 'name', 'email',
+                'is_main', 'name', 'email',
                 'phone', 'qq', 'comment',
-                'enable', 'is_main'
+                'enable'
             ]
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
@@ -84,9 +85,6 @@ class UsersView(BaseView):
             obj = self.user_model.get_obj(**necessary_opts_dict)
 
             # 对象更新
-            password = extra_opts_dict.get('password')
-            if password:
-                extra_opts_dict['password'] = tools.password_to_hash(password)
             extra_opts_dict['updated_by'] = request.user.uuid
             updated_obj = self.user_model.update_obj(obj, **extra_opts_dict)
 
@@ -102,16 +100,18 @@ class UsersView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            # 对象删除
+            # 对象软删除
             obj = self.user_model.get_obj(**necessary_opts_dict)
             soft_deleted_dict = {
                 'deleted_time': tools.get_datetime_with_tz(),
                 'deleted_by': request.user.uuid
             }
             deleted_obj = self.user_model.update_obj(obj, **soft_deleted_dict)
-            self.user_behavior_model.delete_obj(**necessary_opts_dict)
 
             return self.standard_response('succeed to delete %s' % deleted_obj.name)
 
         except CustomException as e:
             return self.exception_to_response(e)
+
+
+

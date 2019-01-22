@@ -74,26 +74,8 @@ class DAO:
         :param kwargs: dict, 列参数
         :return: model object
         """
-        try:
-            obj = self.model(**kwargs)
-            obj.save()
-        except Error as e:
-            msg = e.args[1]
-            raise DatabaseError(msg, self.model.__name__) from e
-        return obj
-
-    def create_multi_obj_or_rollback(self, **kwargs):
-        """
-        创建一个对象到模型中
-        :param kwargs: dict, 列参数
-        :return: model object
-        """
-        try:
-            obj = self.model(**kwargs)
-            obj.save()
-        except Error as e:
-            msg = e.args[1]
-            raise DatabaseError(msg, self.model.__name__) from e
+        obj = self.model(**kwargs)
+        self.save(obj)
         return obj
 
     def update_obj(self, obj, **kwargs):
@@ -105,12 +87,22 @@ class DAO:
         """
         for i in kwargs:
             setattr(obj, i, kwargs[i])
+        self.save(obj)
+        return obj
+
+    def save(self, obj):
+        """
+        保存对象到模型中
+        :param obj: model object, 对象
+        :return: model object
+        """
         try:
             obj.save()
         except Error as e:
             msg = e.args[1]
             raise DatabaseError(msg, self.model.__name__) from e
-        return obj
+        else:
+            return obj
 
     def delete_obj(self, **kwargs):
         """

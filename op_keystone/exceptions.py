@@ -1,10 +1,4 @@
-
-__all__ = [
-    'CustomException', 'MethodNotAllowed', 'LoginFailed',
-    'RequestParamsError', 'ObjectNotExist', 'DatabaseError',
-    'CredenceInvalid'
-]
-
+from utils import tools
 
 class CustomException(Exception):
     """
@@ -17,13 +11,33 @@ class CustomException(Exception):
         return '%s: %s' %(exception_class, exception_message)
 
 
+class PageNotFind(CustomException):
+    """
+    无法找到页面
+    """
+    def __init__(self, path):
+        self.code = 404
+        exception_message = 'path %s is not find' % path
+        super().__init__(exception_message)
+
+
+class InternalError(CustomException):
+    """
+    服务内部逻辑错误
+    """
+    def __init__(self):
+        self.code = 500
+        exception_message = 'there was an internal error'
+        super().__init__(exception_message)
+
+
 class MethodNotAllowed(CustomException):
     """
     请求的方法不被允许
     """
     def __init__(self, method, path):
         self.code = 405
-        exception_message = '%s method is not allowed by %s path' % (method, path)
+        exception_message = 'method %s is not allowed by path %s' % (method, path)
         super().__init__(exception_message)
 
 
@@ -33,13 +47,13 @@ class LoginFailed(CustomException):
     """
     def __init__(self):
         self.code = 403
-        exception_message = 'user does not exist or password error'
+        exception_message = 'user does not exist or password is error'
         super().__init__(exception_message)
 
 
 class CredenceInvalid(CustomException):
     """
-    凭证校验无效
+    校验凭证无效
     """
     def __init__(self, empty=False):
         self.code = 403
@@ -49,17 +63,40 @@ class CredenceInvalid(CustomException):
         super().__init__(exception_message)
 
 
+class PasswordError(CustomException):
+    """
+    密码错误
+    """
+    def __init__(self):
+        self.code = 403
+        exception_message = 'password is error'
+        super().__init__(exception_message)
+
+
+class PasswordInvalid(CustomException):
+    """
+    密码内容不符合有效标准
+    """
+    def __init__(self, exception):
+        self.code = 400
+        exception_message = exception.__str__()
+        super().__init__(exception_message)
+
+
 class RequestParamsError(CustomException):
     """
     从请求中提取的参数有错误
     """
-    def __init__(self, empty=False, opt=None):
+    def __init__(self, empty=False, opt=None, invalid=None):
         self.code = 400
-        exception_message = 'request params is not a standard json'
         if empty:
             exception_message = 'request params is empty'
-        elif opt:
+        elif opt and not invalid:
             exception_message = 'the %s of request params is missing or none' % opt
+        elif opt and invalid:
+            exception_message = 'the %s of request params is not in range' % opt
+        else:
+            exception_message = 'request params is not a standard json'
         super().__init__(exception_message)
 
 
@@ -80,4 +117,24 @@ class DatabaseError(CustomException):
     def __init__(self, msg, model):
         self.code = 409
         exception_message = '%s in the model %s' % (msg.lower(), model)
+        super().__init__(exception_message)
+
+
+class RequestError(CustomException):
+    """
+    对后端请求 api 错误
+    """
+    def __init__(self, method, url):
+        self.code = 502
+        exception_message = 'the response of %s %s is not available' % (method, url)
+        super().__init__(exception_message)
+
+
+class ResponseBackendError(CustomException):
+    """
+    对后端请求 api 返回的响应错误
+    """
+    def __init__(self, method, url, message):
+        self.code = 500
+        exception_message = 'the response of %s %s is %s' % (method, url, message)
         super().__init__(exception_message)

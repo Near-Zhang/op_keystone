@@ -9,7 +9,6 @@ import time
 import geoip2.database
 
 
-
 def get_datetime_with_tz(datetime_obj=None, **kwargs):
     """
     获取当前 datetime 对象，或者转化指定 datetime 对象到指定时区，也可以进行时间增减
@@ -140,7 +139,7 @@ def ip_to_location(ip_addr):
     """
     解析 IP 为其对应的物理位置
     :param ip_addr: str, IP 地址
-    :return: tuple
+    :return: str
     """
     reader = geoip2.database.Reader('utils/geoip/GeoLite2-City.mmdb')
     response = reader.city(ip_addr)
@@ -153,11 +152,11 @@ def ip_to_location(ip_addr):
                 name_dict = attr.names
             except AttributeError:
                 name_dict = attr[0].names
-            v = name_dict.get('zh-CN', None)
+            v = name_dict.get('zh-CN', '')
             location_list.append(v)
         except (AttributeError, IndexError):
-            location_list.append(None)
+            continue
 
-    return location_list
+    return ' '.join(location_list)
 
 
