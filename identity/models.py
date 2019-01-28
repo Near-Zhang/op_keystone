@@ -19,7 +19,7 @@ class User(models.Model):
     email = models.CharField(max_length=64, verbose_name='邮箱')
     phone = models.CharField(max_length=16, verbose_name='手机')
     username = models.CharField(max_length=64, verbose_name='登陆名')
-    domain = models.CharField(max_length=32, verbose_name='归属域')
+    domain = models.CharField(max_length=32, verbose_name='归属域UUID')
     password = models.CharField(max_length=64, verbose_name='密码')
     name = models.CharField(max_length=64, verbose_name='用户姓名')
 
@@ -31,11 +31,11 @@ class User(models.Model):
 
     # 自动生成字段
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建的用户')
+    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
     created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新的用户')
+    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
     updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-    deleted_by = models.CharField(max_length=32, null=True, verbose_name='删除的用户')
+    deleted_by = models.CharField(max_length=32, null=True, verbose_name='删除用户UUID')
     deleted_time = models.DateTimeField(null=True, verbose_name='删除时间')
 
     def __init__(self, *args, **kwargs):
@@ -120,7 +120,7 @@ class Group(models.Model):
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='组名')
-    domain = models.CharField(max_length=32, verbose_name='归属域')
+    domain = models.CharField(max_length=32, verbose_name='归属域UUID')
 
     # 附加字段
     enable = models.BooleanField(default=True, verbose_name='是否可用')
@@ -128,9 +128,9 @@ class Group(models.Model):
 
     # 自动生成字段
     uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建的用户')
+    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
     created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新的用户')
+    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
     updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
     def __init__(self, *args, **kwargs):

@@ -9,7 +9,7 @@ class Token(models.Model):
         db_table = 'token'
 
     # 必要字段
-    user = models.CharField(max_length=32, verbose_name='用户')
+    user = models.CharField(max_length=32, verbose_name='用户UUID')
     token = models.CharField(max_length=32, verbose_name='TOKEN')
     expire_date = models.DateTimeField(verbose_name='过期时间')
 

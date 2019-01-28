@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'identity',
     'partition',
     'credence',
-    'catalog'
+    'catalog',
+    'assignment'
 ]
 
 MIDDLEWARE = [
