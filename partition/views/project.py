@@ -39,7 +39,7 @@ class ProjectsView(BaseView):
     def post(self, request):
         try:
             # 参数提取
-            necessary_opts = ['name', 'purpose', 'domain']
+            necessary_opts = ['name', 'description', 'domain']
             extra_opts = ['enable', 'comment']
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
@@ -64,7 +64,7 @@ class ProjectsView(BaseView):
             # 参数提取
             necessary_opts = ['uuid']
             extra_opts = [
-                'name', 'purpose', 'enable',
+                'name', 'description', 'enable',
                 'comment'
             ]
             request_params = self.get_params_dict(request)

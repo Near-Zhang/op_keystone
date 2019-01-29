@@ -34,7 +34,6 @@ CORS_ORIGIN_ALLOW_ALL = True
 INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
-    'django.contrib.messages',
     'corsheaders',
     'identity',
     'partition',
@@ -49,8 +48,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'identity.middleware.AuthMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'op_keystone.urls'
@@ -63,9 +60,8 @@ WSGI_APPLICATION = 'op_keystone.wsgi.application'
 
 DATABASES = MYSQL_CONFIG
 
+
 # Password validation
-
-
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -108,4 +104,4 @@ USE_TZ = True
 
 
 # token continuous valid time, unit minutes
-TOKEN_VALID_TIME = 60
+TOKEN_VALID_TIME = 600

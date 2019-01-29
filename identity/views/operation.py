@@ -119,6 +119,7 @@ class PasswordView(BaseView):
     """
     用户密码修改
     """
+
     user_model = DAO('identity.models.User')
     token_model = DAO('credence.models.Token')
 
@@ -151,4 +152,3 @@ class PasswordView(BaseView):
 
         except CustomException as e:
             return self.exception_to_response(e)
-

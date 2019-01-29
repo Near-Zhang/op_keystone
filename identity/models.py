@@ -166,3 +166,14 @@ class M2MUserGroup(models.Model):
 
     user = models.CharField(max_length=32, verbose_name='用户UUID')
     group = models.CharField(max_length=32, verbose_name='组UUID')
+
+
+class M2MUserRole(models.Model):
+
+    class Meta:
+        verbose_name = '用户和角色的多对多关系'
+        db_table = 'm2m_user_role'
+        unique_together = ('user', 'role')
+
+    user = models.CharField(max_length=32, verbose_name='用户UUID')
+    role = models.CharField(max_length=32, verbose_name='角色UUID')

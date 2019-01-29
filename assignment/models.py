@@ -3,6 +3,7 @@ from utils import tools
 
 
 class Role(models.Model):
+
     class Meta:
         verbose_name = '角色'
         unique_together = ['name', 'domain']
@@ -14,7 +15,8 @@ class Role(models.Model):
     description = models.CharField(max_length=256, verbose_name='描述')
 
     # 附加字段
-    enable = models.BooleanField(default=True)
+    builtin = models.BooleanField(default=False, verbose_name='是否内置')
+    enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
 
     # 自动生成字段
@@ -51,6 +53,7 @@ class Role(models.Model):
 
 
 class Policy(models.Model):
+
     class Meta:
         verbose_name = '策略'
         db_table = 'policy'
@@ -58,15 +61,16 @@ class Policy(models.Model):
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')
     domain = models.CharField(max_length=32, verbose_name='归属域UUID')
-    type = models.CharField(max_length=32, verbose_name='类型')
     service = models.CharField(max_length=32, verbose_name='服务UUID')
-    url = models.CharField(max_length=4096, verbose_name='路由')
+    view = models.CharField(max_length=512, verbose_name='视图类')
+    method = models.CharField(max_length=16, verbose_name='请求方法')
+    request_params = models.CharField(max_length=4096, verbose_name='请求参数列表')
+    view_params = models.CharField(max_length=4096, verbose_name='视图参数列表')
     effect = models.CharField(max_length=16, verbose_name='效力')
-    condition = models.CharField(max_length=4096, verbose_name='条件')
-    resource = models.CharField(max_length=4096, verbose_name='资源')
 
     # 附加字段
-    enable = models.BooleanField(default=True)
+    builtin = models.BooleanField(default=False, verbose_name='是否内置')
+    enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
 
     # 自动生成字段

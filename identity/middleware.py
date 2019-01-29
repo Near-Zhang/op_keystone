@@ -11,28 +11,13 @@ class AuthMiddleware(MiddlewareMixin):
     仅仅检查用户登陆的中间件
     """
 
+    domain_model = DAO('partition.models.Domain')
     user_model = DAO('identity.models.User')
     token_model = DAO('credence.models.Token')
 
     route_white_list = [
         ('/identity/login/', 'post')
     ]
-
-    @staticmethod
-    def error_json_respond(exception):
-        res = {
-            'code': exception.code,
-            'data': None,
-            'message': exception.__message__()
-        }
-        return JsonResponse(res)
-
-    @staticmethod
-    def check_token_valid(token):
-        now = get_datetime_with_tz()
-        expire_date = get_datetime_with_tz(token.expire_date)
-        if now > expire_date:
-            raise CustomException()
 
     def process_request(self, request):
 
@@ -41,18 +26,26 @@ class AuthMiddleware(MiddlewareMixin):
         if request_route in self.route_white_list:
             return
 
-        # 登陆凭证检查
+        # 登陆凭证校验
         try:
+            # 获取登录凭证
             rq_uuid = request.COOKIES.get('uuid')
             rq_token = request.COOKIES.get('token')
             if not rq_uuid or not rq_token:
                 raise CredenceInvalid(empty=True)
 
             try:
+                # 检查凭证是否过期
                 token = self.token_model.get_obj(user=rq_uuid, token=rq_token)
-                self.check_token_valid(token)
+                now = get_datetime_with_tz()
+                expire_date = get_datetime_with_tz(token.expire_date)
+                if now > expire_date:
+                    raise CustomException()
+
+                # 获取用户信息并将其附在请求上
                 user = self.user_model.get_obj(uuid=rq_uuid)
-                if not user.enable:
+                domain = self.domain_model.get_obj(uuid=user.domain)
+                if not domain.enable or not user.enable:
                     raise CustomException()
                 request.user = user
                 return
@@ -62,3 +55,9 @@ class AuthMiddleware(MiddlewareMixin):
 
         except CredenceInvalid as e:
             return BaseView().exception_to_response(e)
+
+    def process_view(self, request, callback, callback_args, callback_kwargs):
+        print(callback.view_class)
+        print(callback.view_class.__name__)
+        print(callback.view_class.__module__ + '.' + callback.view_class.__name__)
+        print(callback_kwargs)

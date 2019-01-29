@@ -50,6 +50,7 @@ class Service(models.Model):
 
 
 class Endpoint(models.Model):
+
     class Meta:
         verbose_name = '端点'
         db_table = 'endpoint'
