@@ -39,11 +39,11 @@ class PoliciesView(BaseView):
         try:
             # 参数提取
             necessary_opts = [
-                'name', 'domain', 'type',
-                'service', 'url', 'effect',
-                'condition', 'resource'
+                'name', 'domain','service',
+                'view', 'effect', 'method',
+                'request_params', 'view_params'
             ]
-            extra_opts = ['comment', 'enable']
+            extra_opts = ['comment', 'enable', 'builtin']
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
@@ -52,6 +52,8 @@ class PoliciesView(BaseView):
             obj_field = {}
             obj_field.update(necessary_opts_dict)
             obj_field.update(extra_opts_dict)
+            obj_field['request_params'] = tools.json_dumper(obj_field['request_params'])
+            obj_field['view_params'] = tools.json_dumper(obj_field['view_params'])
             obj_field['created_by'] = request.user.uuid
 
             # 创建对象
@@ -67,9 +69,9 @@ class PoliciesView(BaseView):
             # 参数提取
             necessary_opts = ['uuid']
             extra_opts = [
-                'name', 'domain', 'type',
-                'service', 'url', 'effect',
-                'condition', 'resource', 'enable',
+                'name', 'domain','service',
+                'view', 'effect', 'method',
+                'request_params', 'view_params','enable',
                 'comment'
             ]
             request_params = self.get_params_dict(request)
@@ -81,6 +83,10 @@ class PoliciesView(BaseView):
 
             # 对象更新
             extra_opts_dict['updated_by'] = request.user.uuid
+            if extra_opts_dict.get('request_params'):
+                extra_opts_dict['request_params'] = tools.json_dumper(extra_opts_dict['request_params'])
+            if extra_opts_dict.get('view_params'):
+                extra_opts_dict['view_params'] = tools.json_dumper(extra_opts_dict['view_params'])
             updated_obj = self.policy_model.update_obj(obj, **extra_opts_dict)
 
             return self.standard_response(updated_obj.serialize())

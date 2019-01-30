@@ -39,7 +39,7 @@ class RoleToUserView(M2MUserRoleView):
 
             # 获取最新 user 列表
             user_uuid_list = self.m2m_model.get_field_list('user', role=role_uuid)
-            user_dict_list = self.role_model.get_dict_list(uuid__in=user_uuid_list)
+            user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             return self.standard_response(user_dict_list)
 

@@ -63,6 +63,16 @@ class CredenceInvalid(CustomException):
         super().__init__(exception_message)
 
 
+class PermissionDenied(CustomException):
+    """
+    权限被拒绝
+    """
+    def __init__(self):
+        self.code = 403
+        exception_message = 'unable to access the server'
+        super().__init__(exception_message)
+
+
 class PasswordError(CustomException):
     """
     密码错误

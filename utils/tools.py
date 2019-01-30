@@ -62,6 +62,20 @@ def password_to_hash(password):
     return h.hexdigest()
 
 
+def json_dumper(obj):
+    """
+    序列化对象为 json 字符串并返回结果
+    :param obj: obj
+    :return: json str
+    """
+    if not obj:
+        return ''
+    try:
+        return json.dumps(obj)
+    except ValueError:
+        return ''
+
+
 def json_loader(json_str):
     """
     反序列化 json 字符串并返回结果
@@ -135,14 +149,14 @@ def paging_list(total_list, page=1, pagesize=20):
     }
 
 
-def ip_to_location(ip_addr):
+def ip_to_location(ip):
     """
     解析 IP 为其对应的物理位置
-    :param ip_addr: str, IP 地址
+    :param ip: str, IP 地址
     :return: str
     """
     reader = geoip2.database.Reader('utils/geoip/GeoLite2-City.mmdb')
-    response = reader.city(ip_addr)
+    response = reader.city(ip)
 
     location_list = []
     for k in ['continent', 'country', 'subdivisions', 'city']:

@@ -101,6 +101,9 @@ class Policy(models.Model):
         d = self.__dict__.copy()
         del d['_state']
 
+        for i in ['request_params', 'view_params']:
+            d[i] = tools.json_loader(d[i])
+
         for i in ['created_time', 'updated_time']:
             d[i] = tools.datetime_to_humanized(d[i])
         return d

@@ -38,7 +38,7 @@ class RoleToPolicyView(M2MRolePolicyView):
             policy_opts_dict = self.extract_opts(request_params, policy_opts)
 
             # 获取需要添加的列表
-            self.role_model.get_obj(role=role_uuid)
+            self.role_model.get_obj(uuid=role_uuid)
             policy_uuid_set = set(policy_opts_dict['policies'])
             old_policy_uuid_set = set(self.m2m_model.get_field_list('policy', role=role_uuid))
             add_policy_uuid_list = list(policy_uuid_set - old_policy_uuid_set)
@@ -146,7 +146,7 @@ class PolicyToRoleView(M2MRolePolicyView):
 
             # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', policy=policy_uuid)
-            role_dict_list = self.policy_model.get_dict_list(uuid__in=role_uuid_list)
+            role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
             return self.standard_response(role_dict_list)
 
