@@ -62,6 +62,10 @@ class User(models.Model):
                 d[i] = tools.datetime_to_humanized(d[i])
         return d
 
+    def check_single_main_user(self):
+        if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() >= 1:
+            raise DatabaseError('not the single user in domain %s' % self.domain, self.__class__.__name__)
+
     def check_password(self, password):
         """
         检查密码是否正确

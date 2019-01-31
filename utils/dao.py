@@ -68,34 +68,38 @@ class DAO:
             field_list.append(getattr(obj, field))
         return field_list
 
-    def create_obj(self, **kwargs):
+    def create_obj(self, check_methods=(), **kwargs):
         """
         创建一个对象到模型中
+        :param check_methods: tuple, 包含多个用于自检的方法名的元祖
         :param kwargs: dict, 列参数
         :return: model object
         """
         obj = self.model(**kwargs)
-        self.save(obj)
-        return obj
+        for cm in check_methods:
+            getattr(obj, cm)()
 
-    def update_obj(self, obj, **kwargs):
+        try:
+            obj.save()
+        except Error as e:
+            msg = e.args[1]
+            raise DatabaseError(msg, self.model.__name__) from e
+        else:
+            return obj
+
+    def update_obj(self, obj, check_methods=(), **kwargs):
         """
         从模型中修改一个对象
         :param obj: model object, 对象
+        :param check_methods: tuple, 包含多个用于自检的方法名的元祖
         :param kwargs: dict, 列参数
         :return: model object
         """
         for i in kwargs:
             setattr(obj, i, kwargs[i])
-        self.save(obj)
-        return obj
+        for cm in check_methods:
+            getattr(obj, cm)()
 
-    def save(self, obj):
-        """
-        保存对象到模型中
-        :param obj: model object, 对象
-        :return: model object
-        """
         try:
             obj.save()
         except Error as e:

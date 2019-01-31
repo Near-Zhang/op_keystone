@@ -105,3 +105,9 @@ USE_TZ = True
 
 # token continuous valid time, unit minutes
 TOKEN_VALID_TIME = 600
+
+
+# auth route white list
+ROUTE_WHITE_LIST = [
+        ('/identity/login/', 'post')
+    ]

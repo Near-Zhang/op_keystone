@@ -3,6 +3,7 @@ from op_keystone.exceptions import *
 from op_keystone.base_view import BaseView
 from utils import tools
 from utils.dao import DAO
+from django.conf import settings
 
 
 class AuthMiddleware(MiddlewareMixin):
@@ -20,19 +21,11 @@ class AuthMiddleware(MiddlewareMixin):
     m2m_group_role_model = DAO('identity.models.M2MGroupRole')
     m2m_role_policy_model = DAO('assignment.models.M2MRolePolicy')
 
-    route_white_list = [
-        ('/identity/login/', 'post')
-    ]
-
-    policy_white_list = [
-
-    ]
-
     def process_request(self, request):
 
         # 白名单路由处理
         request_route = (request.path, request.method.lower())
-        if request_route in self.route_white_list:
+        if request_route in settings.ROUTE_WHITE_LIST:
             return
 
         # 登陆凭证校验
@@ -51,12 +44,21 @@ class AuthMiddleware(MiddlewareMixin):
                 if now > expire_date:
                     raise CustomException()
 
-                # 获取用户信息并将其附在请求上
+                # 设置用户信息到请求
                 user = self.user_model.get_obj(uuid=rq_uuid)
                 domain = self.domain_model.get_obj(uuid=user.domain)
                 if not domain.enable or not user.enable:
                     raise CustomException()
                 request.user = user
+
+                # 设置用户的管理级别到请求, 0 普通用户, 1 域管理员, 2 云管理员
+                user_level = 0
+                if user.is_main:
+                    user_level = 1
+                    if domain.is_main:
+                        user_level = 2
+                request.user_level = user_level
+
                 return
 
             except CustomException:
