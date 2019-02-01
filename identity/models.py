@@ -2,6 +2,7 @@ from django.db import models
 from op_keystone.exceptions import *
 from django.contrib.auth.password_validation import validate_password as v_password
 from django.core.exceptions import ValidationError
+from utils.dao import DAO
 
 
 class User(models.Model):
@@ -62,9 +63,6 @@ class User(models.Model):
                 d[i] = tools.datetime_to_humanized(d[i])
 
         # 附加信息
-        print(self.__dict__)
-        print(self.uuid)
-        print(self.password)
         d['behavior'] = UserBehavior.objects.get(user=self.uuid).serialize()
         d['groups_count'] = M2MUserGroup.objects.filter(user=self.uuid).count()
         d['roles_count'] = M2MUserRole.objects.filter(user=self.uuid).count()
@@ -95,9 +93,10 @@ class User(models.Model):
 
     def pre_save(self):
         """
-        保存前，检查单个 domain 中 main user 是否唯一
+        保存前，检查 domain 是否存在，且其中 main user 是否唯一
         :return:
         """
+        DAO('partition.models.Domain').get_obj(uuid=self.domain)
         if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() >= 1:
             raise DatabaseError('not the single user in domain %s' % self.domain, self.__class__.__name__)
 
@@ -187,6 +186,13 @@ class Group(models.Model):
         d['roles_count'] = M2MGroupRole.objects.filter(group=self.uuid).count()
 
         return d
+
+    def pre_save(self):
+        """
+        保存前，检查 domain 是否存在
+        :return:
+        """
+        DAO('partition.models.Domain').get_obj(uuid=self.domain)
 
 
 class M2MUserGroup(models.Model):

@@ -66,8 +66,9 @@ class GroupsView(BaseView):
             obj_field.update(necessary_opts_dict)
             obj_field.update(extra_opts_dict)
 
-            # 创建对象
-            obj = self.group_model.create_obj(**obj_field)
+            # 对象创建
+            check_methods = ('pre_save',)
+            obj = self.group_model.create_obj(check_methods=check_methods, **obj_field)
 
             # 返回创建的对象
             return self.standard_response(obj.serialize())
@@ -97,8 +98,9 @@ class GroupsView(BaseView):
             obj = self.group_model.get_obj(**necessary_opts_dict, **domain_opts_dict)
 
             # 对象更新
+            check_methods = ('pre_save',)
             extra_opts_dict['updated_by'] = request.user.uuid
-            updated_obj = self.group_model.update_obj(obj, **extra_opts_dict)
+            updated_obj = self.group_model.update_obj(obj, check_methods=check_methods, **extra_opts_dict)
 
             # 返回更新的对象
             return self.standard_response(updated_obj.serialize())

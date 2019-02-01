@@ -200,7 +200,7 @@ class GroupToUserView(M2MUserGroupView):
 
             # 获取最新 user 列表
             user_uuid_list = self.m2m_model.get_field_list('user', group=group_uuid)
-            user_dict_list = self.group_model.get_dict_list(uuid__in=user_uuid_list)
+            user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
             return self.standard_response(user_dict_list)

@@ -11,6 +11,7 @@ class UsersView(BaseView):
 
     user_model = DAO('identity.models.User')
     user_behavior_model = DAO('identity.models.UserBehavior')
+    domain_model = DAO('partition.models.Domain')
     m2m_user_group_model = DAO('identity.models.M2MUserGroup')
     m2m_user_role_model = DAO('identity.models.M2MUserRole')
 
@@ -76,7 +77,7 @@ class UsersView(BaseView):
             obj_field.update(necessary_opts_dict)
             obj_field.update(extra_opts_dict)
 
-            # 自检方法执行后，创建用户对象，并创建其用户行为对象
+            # 用户对象创建，然后用户行为对象创建
             check_methods = ('pre_save', 'validate_password')
             obj = self.user_model.create_obj(check_methods=check_methods, **obj_field)
             self.user_behavior_model.create_obj(user=obj.uuid)
