@@ -11,11 +11,13 @@ class UsersView(BaseView):
 
     user_model = DAO('identity.models.User')
     user_behavior_model = DAO('identity.models.UserBehavior')
+    m2m_user_group_model = DAO('identity.models.M2MUserGroup')
+    m2m_user_role_model = DAO('identity.models.M2MUserRole')
 
     def get(self, request):
         try:
             # 设置 domain 字段过滤参数
-            if request.user_level == 2:
+            if request.cloud_admin:
                 domain_opts_dict = {}
             else:
                 domain_opts_dict = {'domain': request.user.domain}
@@ -34,12 +36,12 @@ class UsersView(BaseView):
             page_opts = ['page', 'pagesize']
             page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
 
-            # 根据页码参数获取当前页的数据列表
+            # 当前页数据获取
             total_list = self.user_model.get_dict_list(**domain_opts_dict)
-            page_list = tools.paging_list(total_list, **page_opts_dict)
+            page_data = tools.paging_list(total_list, **page_opts_dict)
 
-            # 返回数据列表
-            return self.standard_response(page_list)
+            # 返回数据
+            return self.standard_response(page_data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -56,7 +58,7 @@ class UsersView(BaseView):
             ]
 
             # 云管理员的参数提取列表补充
-            if request.user_level == 2:
+            if request.cloud_admin:
                 extra_opts.extend([
                     'domain', 'is_main'
                 ])
@@ -66,16 +68,18 @@ class UsersView(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
-            # 参数合成，预设 domain 的值
-            obj_field = {'domain': request.user.domain}
+            # 参数合成，预设 domain、create_by 的值
+            obj_field = {
+                'domain': request.user.domain,
+                'created_by': request.user.uuid
+            }
             obj_field.update(necessary_opts_dict)
             obj_field.update(extra_opts_dict)
-            obj_field['created_by'] = request.user.uuid
 
             # 自检方法执行后，创建用户对象，并创建其用户行为对象
-            check_methods = ('check_single_main_user', 'validate_password')
+            check_methods = ('pre_save', 'validate_password')
             obj = self.user_model.create_obj(check_methods=check_methods, **obj_field)
-            self.user_behavior_model.create_obj(uuid=obj.uuid)
+            self.user_behavior_model.create_obj(user=obj.uuid)
 
             # 返回创建的对象
             return self.standard_response(obj.serialize())
@@ -93,7 +97,7 @@ class UsersView(BaseView):
             ]
 
             # 设置 domain 字段过滤参数和云管理员的参数提取列表补充
-            if request.user_level == 2:
+            if request.cloud_admin:
                 domain_opts_dict = {}
                 extra_opts.extend([
                     'domain', 'is_main'
@@ -110,7 +114,7 @@ class UsersView(BaseView):
             obj = self.user_model.get_obj(**necessary_opts_dict, **domain_opts_dict)
 
             # 对象更新
-            check_methods = ('check_single_main_user',)
+            check_methods = ('pre_save',)
             extra_opts_dict['updated_by'] = request.user.uuid
             updated_obj = self.user_model.update_obj(obj, check_methods=check_methods, **extra_opts_dict)
 
@@ -123,7 +127,7 @@ class UsersView(BaseView):
     def delete(self, request):
         try:
             # 设置 domain 字段过滤参数
-            if request.user_level == 2:
+            if request.cloud_admin:
                 domain_opts_dict = {}
             else:
                 domain_opts_dict = {'domain': request.user.domain}
@@ -134,17 +138,12 @@ class UsersView(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
             # 对象软删除
-            obj = self.user_model.get_obj(**necessary_opts_dict, **domain_opts_dict)
-            soft_deleted_dict = {
-                'deleted_time': tools.get_datetime_with_tz(),
-                'deleted_by': request.user.uuid
-            }
-            deleted_obj = self.user_model.update_obj(obj, **soft_deleted_dict)
+            check_methods = ('pre_delete',)
+            deleted_obj = self.user_model.delete_obj(check_methods=check_methods, deleted_by=request.user.uuid,
+                                                     **necessary_opts_dict, **domain_opts_dict)
 
-            return self.standard_response('succeed to delete %s' % deleted_obj.name)
+            # 返回成功删除
+            return self.standard_response('success to delete %s' % deleted_obj.name)
 
         except CustomException as e:
             return self.exception_to_response(e)
-
-
-

@@ -51,13 +51,11 @@ class AuthMiddleware(MiddlewareMixin):
                     raise CustomException()
                 request.user = user
 
-                # 设置用户的管理级别到请求, 0 普通用户, 1 域管理员, 2 云管理员
-                user_level = 0
-                if user.is_main:
-                    user_level = 1
-                    if domain.is_main:
-                        user_level = 2
-                request.user_level = user_level
+                # 判断是否为云管理员，并设置标志到请求
+                if user.is_main and domain.is_main:
+                    request.cloud_admin = True
+                else:
+                    request.cloud_admin = False
 
                 return
 
@@ -75,53 +73,53 @@ class AuthMiddleware(MiddlewareMixin):
 
         # 开始鉴权
         try:
+            # 整合请求动作的信息
             view = callback.view_class.__module__ + '.' + callback.view_class.__name__
             method = request.method.lower()
             view_params_dict = callback_kwargs
             request_params_dict = BaseView().get_params_dict(request, nullable=True)
-
             action_info = (view, method, view_params_dict, request_params_dict)
 
-            try:
-                role_uuid_set = set([])
-                policy_uuid_set = set([])
+            role_uuid_set = set([])
+            policy_uuid_set = set([])
 
-                # 将用户对应的 role uuid 放入集合
-                user_uuid = request.user.uuid
-                u_role_uuid_list = self.m2m_user_role_model.get_field_list('role', user=user_uuid)
-                role_uuid_set = role_uuid_set | set(u_role_uuid_list)
+            # 将用户对应的 role uuid 放入集合
+            user_uuid = request.user.uuid
+            u_role_uuid_list = self.m2m_user_role_model.get_field_list('role', user=user_uuid)
+            role_uuid_set = role_uuid_set | set(u_role_uuid_list)
 
-                # 将用户所在用户组对应的 role uuid 放入集合
-                group_uuid_list = self.m2m_user_group_model.get_field_list('group', user=user_uuid)
-                for group_uuid in group_uuid_list:
-                    g_role_uuid_list = self.m2m_group_role_model.get_field_list('role', group=group_uuid)
-                    role_uuid_set = role_uuid_set | set(g_role_uuid_list)
+            # 将用户所在用户组对应的 role uuid 放入集合
+            group_uuid_list = self.m2m_user_group_model.get_field_list('group', user=user_uuid)
+            for group_uuid in group_uuid_list:
+                g_role_uuid_list = self.m2m_group_role_model.get_field_list('role', group=group_uuid)
+                role_uuid_set = role_uuid_set | set(g_role_uuid_list)
 
-                # 获取所有 role 对应的 policy uuid 放入集合
-                for role_uuid in role_uuid_set:
-                    policy_uuid_list = self.m2m_role_policy_model.get_field_list('policy', role=role_uuid)
-                    policy_uuid_set = role_uuid_set | set(policy_uuid_list)
+            # 获取所有 role 对应的 policy uuid 放入集合
+            for role_uuid in role_uuid_set:
+                policy_uuid_list = self.m2m_role_policy_model.get_field_list('policy', role=role_uuid)
+                policy_uuid_set = role_uuid_set | set(policy_uuid_list)
 
-                # 获取所有的 policy 列表
-                policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_set)
+            # 获取所有的 policy 列表
+            policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_set)
 
-                # 对策略进行逐条判断，默认策略是拒绝访问
-                access = False
-                for policy_dict in policy_dict_list:
-                    effect = self.judge_policy(action_info, policy_dict)
-                    if effect == 'allow':
-                        access = True
-                    elif effect == 'deny':
-                        access = False
-                        break
+            # 对策略进行逐条判断，默认策略是拒绝访问
+            access = False
+            for policy_dict in policy_dict_list:
+                effect = self.judge_policy(action_info, policy_dict)
+                if effect == 'allow':
+                    access = True
+                elif effect == 'deny':
+                    access = False
+                    break
 
-                if not access:
-                    raise CustomException()
+            if not access:
+                raise CustomException()
 
-            except CustomException:
-                raise PermissionDenied()
+        except RequestParamsError as e:
+            return BaseView().exception_to_response(e)
 
-        except PermissionDenied as e:
+        except CustomException:
+            e = PermissionDenied()
             return BaseView().exception_to_response(e)
 
     @staticmethod

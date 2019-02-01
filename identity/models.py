@@ -60,11 +60,16 @@ class User(models.Model):
         for i in ['created_time', 'updated_time', 'deleted_time']:
             if not d[i] is None:
                 d[i] = tools.datetime_to_humanized(d[i])
-        return d
 
-    def check_single_main_user(self):
-        if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() >= 1:
-            raise DatabaseError('not the single user in domain %s' % self.domain, self.__class__.__name__)
+        # 附加信息
+        print(self.__dict__)
+        print(self.uuid)
+        print(self.password)
+        d['behavior'] = UserBehavior.objects.get(user=self.uuid).serialize()
+        d['groups_count'] = M2MUserGroup.objects.filter(user=self.uuid).count()
+        d['roles_count'] = M2MUserRole.objects.filter(user=self.uuid).count()
+
+        return d
 
     def check_password(self, password):
         """
@@ -88,6 +93,22 @@ class User(models.Model):
         else:
             self.password = tools.password_to_hash(self.password)
 
+    def pre_save(self):
+        """
+        保存前，检查单个 domain 中 main user 是否唯一
+        :return:
+        """
+        if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() >= 1:
+            raise DatabaseError('not the single user in domain %s' % self.domain, self.__class__.__name__)
+
+    def pre_delete(self):
+        """
+        删除前，删除对象的对外关联
+        :return:
+        """
+        M2MUserGroup.objects.filter(user=self.uuid).delete()
+        M2MUserRole.objects.filter(user=self.uuid).delete()
+
 
 class UserBehavior(models.Model):
 
@@ -96,7 +117,7 @@ class UserBehavior(models.Model):
         db_table = 'user_behavior'
 
     # 逻辑生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
+    user = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
     last_time = models.DateTimeField(null=True, verbose_name='上次登陆时间')
     last_ip = models.CharField(max_length=16, null=True, verbose_name='上次登陆IP')
     last_location = models.CharField(max_length=32, null=True, verbose_name='上次登陆地址')
@@ -108,10 +129,12 @@ class UserBehavior(models.Model):
         """
         d = self.__dict__.copy()
         del d['_state']
+        del d['user']
 
         for i in ['last_time']:
             if not d[i] is None:
                 d[i] = tools.datetime_to_humanized(d[i])
+
         return d
 
 
@@ -158,6 +181,11 @@ class Group(models.Model):
         for i in ['created_time', 'updated_time']:
             if not d[i] is None:
                 d[i] = tools.datetime_to_humanized(d[i])
+
+        # 附加信息
+        d['users_count'] = M2MUserGroup.objects.filter(group=self.uuid).count()
+        d['roles_count'] = M2MGroupRole.objects.filter(group=self.uuid).count()
+
         return d
 
 

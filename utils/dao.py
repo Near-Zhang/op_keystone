@@ -108,14 +108,27 @@ class DAO:
         else:
             return obj
 
-    def delete_obj(self, **kwargs):
+    def delete_obj(self, check_methods=(), deleted_by=None, **kwargs):
         """
-        从模型中过滤并删除单个对象
+        从模型中过滤并删除单个对象，自行区分呢是否软删除
+        :param check_methods: tuple, 包含多个用于自检的方法名的元祖
+        :param deleted_by: str, 删除用户 uuid，软删除需要
         :param kwargs: 过滤参数
         :return: model object
         """
         obj = self.get_obj(**kwargs)
-        obj.delete()
+
+        for cm in check_methods:
+            getattr(obj, cm)()
+
+        if hasattr(obj, 'deleted_time'):
+            soft_deleted_dict = {
+                'deleted_time': tools.get_datetime_with_tz(),
+                'deleted_by': deleted_by
+            }
+            obj = self.update_obj(obj, **soft_deleted_dict)
+        else:
+            obj.delete()
 
         return obj
 
