@@ -98,7 +98,7 @@ class User(models.Model):
         :return:
         """
         DAO('partition.models.Domain').get_obj(uuid=self.domain)
-        if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() >= 1:
+        if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() > 0:
             raise DatabaseError('not the single main user of domain %s' % self.domain, self.__class__.__name__)
 
     def pre_delete(self):
@@ -194,6 +194,15 @@ class Group(models.Model):
         :return:
         """
         DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+    def pre_delete(self):
+        """
+        删除前，检查和删除对象的对外关联
+        :return:
+        """
+        if M2MUserGroup.objects.filter(group=self.uuid).count() > 0:
+            raise DatabaseError('group are referenced by users', self.__class__.__name__)
+        M2MUserRole.objects.filter(group=self.uuid).delete()
 
 
 class M2MUserGroup(models.Model):

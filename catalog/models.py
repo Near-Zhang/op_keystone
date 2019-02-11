@@ -9,7 +9,7 @@ class Service(models.Model):
         db_table = 'service'
 
     # 必要字段
-    name = models.CharField(max_length=64, unique=True, verbose_name='域名')
+    name = models.CharField(max_length=64, unique=True, verbose_name='服务名')
     function = models.CharField(max_length=128, verbose_name='功能')
 
     # 附加字段

@@ -39,14 +39,6 @@ class Domain(models.Model):
         if not self.uuid:
             self.uuid = tools.generate_unique_uuid()
 
-    def pre_save(self):
-        """
-        保存前，检查 main domain 是否唯一
-        :return:
-        """
-        if self.is_main and self.__class__.objects.filter(is_main=True).count() >= 1:
-            raise DatabaseError('not the single main domain', self.__class__.__name__)
-
     def serialize(self):
         """
         对象序列化
@@ -62,8 +54,18 @@ class Domain(models.Model):
         d['project_count'] = Project.objects.filter(domain=self.uuid).count()
         d['user_count'] = DAO('identity.models.User').get_obj_qs(domain=self.uuid).count()
         d['group_count'] = DAO('identity.models.Group').get_obj_qs(domain=self.uuid).count()
+        d['custom_role_count'] = DAO('assignment.models.Role').get_obj_qs(domain=self.uuid, builtin=False).count()
+        d['custom_policy_count'] = DAO('assignment.models.Policy').get_obj_qs(domain=self.uuid, builtin=False).count()
 
         return d
+
+    def pre_save(self):
+        """
+        保存前，检查 main domain 是否唯一
+        :return:
+        """
+        if self.is_main and self.__class__.objects.filter(is_main=True).count() >= 1:
+            raise DatabaseError('not the single main domain', self.__class__.__name__)
 
 
 class Project(models.Model):
@@ -102,6 +104,7 @@ class Project(models.Model):
 
         for i in ['created_time', 'updated_time']:
             d[i] = tools.datetime_to_humanized(d[i])
+
         return d
 
     def __init__(self, *args, **kwargs):

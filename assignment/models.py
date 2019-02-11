@@ -1,6 +1,7 @@
 from django.db import models
 from utils import tools
 from utils.dao import DAO
+from op_keystone.exceptions import DatabaseError
 
 
 class Role(models.Model):
@@ -62,6 +63,17 @@ class Role(models.Model):
             self.domain = domain_model.get_obj(is_main=True).uuid
         else:
             domain_model.get_obj(uuid=self.domain)
+
+    def pre_delete(self):
+        """
+        删除前，检查对象的对外关联
+        :return:
+        """
+        if DAO('identity.models.M2MUserRole').get_obj_qs(role=self.uuid).count() > 0:
+            raise DatabaseError('role are referenced by users', self.__class__.__name__)
+        if DAO('identity.models.M2MGroupRole').get_obj_qs(role=self.uuid).count() > 0:
+            raise DatabaseError('role are referenced by groups', self.__class__.__name__)
+        M2MRolePolicy.objects.filter(role=self.uuid).delete()
 
 
 class Policy(models.Model):
@@ -130,6 +142,14 @@ class Policy(models.Model):
             self.domain = domain_model.get_obj(is_main=True).uuid
         else:
             domain_model.get_obj(uuid=self.domain)
+
+    def pre_delete(self):
+        """
+        删除前，检查对象的对外关联
+        :return:
+        """
+        if M2MRolePolicy.objects.filter(policy=self.uuid).count() > 0:
+            raise DatabaseError('policy are referenced by roles', self.__class__.__name__)
 
 
 class M2MRolePolicy(models.Model):

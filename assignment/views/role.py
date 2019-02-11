@@ -136,8 +136,10 @@ class RolesView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            # 对象获取
-            deleted_obj = self.role_model.delete_obj(**necessary_opts_dict, **domain_opts_dict)
+            # 对象删除
+            check_methods = ('pre_delete',)
+            deleted_obj = self.role_model.delete_obj(check_methods=check_methods, **necessary_opts_dict,
+                                                     **domain_opts_dict)
 
             # 返回成功删除
             return self.standard_response('succeed to delete %s' % deleted_obj.name)
