@@ -1,5 +1,6 @@
 from django.db import models
 from utils import tools
+from utils.dao import DAO
 
 
 class Role(models.Model):
@@ -50,6 +51,17 @@ class Role(models.Model):
         for i in ['created_time', 'updated_time']:
             d[i] = tools.datetime_to_humanized(d[i])
         return d
+
+    def pre_save(self):
+        """
+        保存前，检查 domain 是否存在，当角色为 builtin 时固定 domain 为 main domain
+        :return:
+        """
+        domain_model = DAO('partition.models.Domain')
+        if self.builtin:
+            self.domain = domain_model.get_obj(is_main=True).uuid
+        else:
+            domain_model.get_obj(uuid=self.domain)
 
 
 class Policy(models.Model):
@@ -107,6 +119,17 @@ class Policy(models.Model):
         for i in ['created_time', 'updated_time']:
             d[i] = tools.datetime_to_humanized(d[i])
         return d
+
+    def pre_save(self):
+        """
+        保存前，检查 domain 是否存在，当策略为 builtin 时固定 domain 为 main domain
+        :return:
+        """
+        domain_model = DAO('partition.models.Domain')
+        if self.builtin:
+            self.domain = domain_model.get_obj(is_main=True).uuid
+        else:
+            domain_model.get_obj(uuid=self.domain)
 
 
 class M2MRolePolicy(models.Model):

@@ -11,6 +11,7 @@ class User(models.Model):
         verbose_name = '用户'
         db_table = 'user'
         unique_together = [
+            ('domain', 'name', 'deleted_time'),
             ('domain', 'username', 'deleted_time'),
             ('phone', 'deleted_time'),
             ('email', 'deleted_time')
@@ -98,7 +99,7 @@ class User(models.Model):
         """
         DAO('partition.models.Domain').get_obj(uuid=self.domain)
         if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() >= 1:
-            raise DatabaseError('not the single user in domain %s' % self.domain, self.__class__.__name__)
+            raise DatabaseError('not the single main user of domain %s' % self.domain, self.__class__.__name__)
 
     def pre_delete(self):
         """

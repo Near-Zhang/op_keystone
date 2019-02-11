@@ -1,7 +1,7 @@
 from django.db import models
-from utils.tools import (
-    datetime_to_humanized, generate_unique_uuid
-)
+from op_keystone.exceptions import *
+from utils import tools
+from utils.dao import DAO
 
 
 class Domain(models.Model):
@@ -29,6 +29,24 @@ class Domain(models.Model):
     def __str__(self):
         return '{"uuid": "%s", "name": "%s"}' %(self.uuid, self.name)
 
+    def __init__(self, *args, **kwargs):
+        """
+        实例构建后生成唯一 uuid
+        :param args:
+        :param kwargs:
+        """
+        super().__init__(*args, **kwargs)
+        if not self.uuid:
+            self.uuid = tools.generate_unique_uuid()
+
+    def pre_save(self):
+        """
+        保存前，检查 main domain 是否唯一
+        :return:
+        """
+        if self.is_main and self.__class__.objects.filter(is_main=True).count() >= 1:
+            raise DatabaseError('not the single main domain', self.__class__.__name__)
+
     def serialize(self):
         """
         对象序列化
@@ -38,18 +56,14 @@ class Domain(models.Model):
         del d['_state']
 
         for i in ['created_time', 'updated_time']:
-            d[i] = datetime_to_humanized(d[i])
-        return d
+            d[i] = tools.datetime_to_humanized(d[i])
 
-    def __init__(self, *args, **kwargs):
-        """
-        实例构建后生成唯一 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = generate_unique_uuid()
+        # 附加信息
+        d['project_count'] = Project.objects.filter(domain=self.uuid).count()
+        d['user_count'] = DAO('identity.models.User').get_obj_qs(domain=self.uuid).count()
+        d['group_count'] = DAO('identity.models.Group').get_obj_qs(domain=self.uuid).count()
+
+        return d
 
 
 class Project(models.Model):
@@ -87,7 +101,7 @@ class Project(models.Model):
         del d['_state']
 
         for i in ['created_time', 'updated_time']:
-            d[i] = datetime_to_humanized(d[i])
+            d[i] = tools.datetime_to_humanized(d[i])
         return d
 
     def __init__(self, *args, **kwargs):
@@ -98,4 +112,11 @@ class Project(models.Model):
         """
         super().__init__(*args, **kwargs)
         if not self.uuid:
-            self.uuid = generate_unique_uuid()
+            self.uuid = tools.generate_unique_uuid()
+
+    def pre_save(self):
+        """
+        保存前，检查 domain 是否存在
+        :return:
+        """
+        DAO('partition.models.Domain').get_obj(uuid=self.domain)

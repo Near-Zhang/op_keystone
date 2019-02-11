@@ -142,7 +142,6 @@ class UsersView(BaseView):
             check_methods = ('pre_delete',)
             deleted_obj = self.user_model.delete_obj(check_methods=check_methods, deleted_by=request.user.uuid,
                                                      **necessary_opts_dict, **domain_opts_dict)
-
             # 返回成功删除
             return self.standard_response('success to delete %s' % deleted_obj.name)
 
