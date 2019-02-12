@@ -134,9 +134,10 @@ class Policy(models.Model):
 
     def pre_save(self):
         """
-        保存前，检查 domain 是否存在，当策略为 builtin 时固定 domain 为 main domain
+        保存前，检查 domain、service 是否存在，当策略为 builtin 时固定 domain 为 main domain
         :return:
         """
+        DAO('catalog.models.Service').get_obj(uuid=self.service)
         domain_model = DAO('partition.models.Domain')
         if self.builtin:
             self.domain = domain_model.get_obj(is_main=True).uuid

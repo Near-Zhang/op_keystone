@@ -103,9 +103,11 @@ class User(models.Model):
 
     def pre_delete(self):
         """
-        删除前，删除对象的对外关联
+        删除前，检查是否为主用户，删除对象的对外关联
         :return:
         """
+        if self.is_main:
+            raise DatabaseError('user %s is the main user' % self.name, self.__class__.__name__)
         M2MUserGroup.objects.filter(user=self.uuid).delete()
         M2MUserRole.objects.filter(user=self.uuid).delete()
 

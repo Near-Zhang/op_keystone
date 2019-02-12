@@ -64,8 +64,15 @@ class Domain(models.Model):
         保存前，检查 main domain 是否唯一
         :return:
         """
-        if self.is_main and self.__class__.objects.filter(is_main=True).count() >= 1:
+        if self.is_main and self.__class__.objects.filter(is_main=True).count() > 0:
             raise DatabaseError('not the single main domain', self.__class__.__name__)
+
+    def pre_delete(self):
+        """
+        删除前，检查和删除对象的对外关联
+        :return:
+        """
+        pass
 
 
 class Project(models.Model):

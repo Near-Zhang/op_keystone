@@ -13,8 +13,11 @@ class AuthMiddleware(MiddlewareMixin):
 
     domain_model = DAO('partition.models.Domain')
     user_model = DAO('identity.models.User')
+    group_model = DAO('identity.models.Group')
     token_model = DAO('credence.models.Token')
+    role_model = DAO('assignment.models.Role')
     policy_model = DAO('assignment.models.Policy')
+    service_model = DAO('catalog.models.Service')
 
     m2m_user_role_model = DAO('identity.models.M2MUserRole')
     m2m_user_group_model = DAO('identity.models.M2MUserGroup')
@@ -73,7 +76,8 @@ class AuthMiddleware(MiddlewareMixin):
 
         # 开始鉴权
         try:
-            # 整合请求动作的信息
+            # 整合服务和请求动作的信息
+            service = self.service_model.get_obj(name='keystone').uuid
             view = callback.view_class.__module__ + '.' + callback.view_class.__name__
             method = request.method.lower()
             view_params_dict = callback_kwargs
@@ -90,17 +94,25 @@ class AuthMiddleware(MiddlewareMixin):
 
             # 将用户所在用户组对应的 role uuid 放入集合
             group_uuid_list = self.m2m_user_group_model.get_field_list('group', user=user_uuid)
+            print(role_uuid_set)
             for group_uuid in group_uuid_list:
+                print(group_uuid)
+                if not self.group_model.get_obj(uuid=group_uuid).enable:
+                    print('ok')
+                    continue
                 g_role_uuid_list = self.m2m_group_role_model.get_field_list('role', group=group_uuid)
+                print(role_uuid_set)
                 role_uuid_set = role_uuid_set | set(g_role_uuid_list)
 
             # 获取所有 role 对应的 policy uuid 放入集合
             for role_uuid in role_uuid_set:
+                if not self.role_model.get_obj(uuid=role_uuid).enable:
+                    continue
                 policy_uuid_list = self.m2m_role_policy_model.get_field_list('policy', role=role_uuid)
                 policy_uuid_set = role_uuid_set | set(policy_uuid_list)
 
-            # 获取所有的 policy 列表
-            policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_set)
+            # 获取关于当前 service 的所有 policy 列表
+            policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_set, enable=True, service=service)
 
             # 对策略进行逐条判断，默认策略是拒绝访问
             access = False
@@ -141,9 +153,8 @@ class AuthMiddleware(MiddlewareMixin):
         for p in view_params:
             match = True
             for k in action_info[2]:
-                for k in action_info[2]:
-                    if p.get(k) and p.get(k) != action_info[2].get(k):
-                        match = False
+                if p.get(k) and p.get(k) != action_info[2].get(k):
+                    match = False
             if match:
                 view_params_match = True
                 break
@@ -164,4 +175,3 @@ class AuthMiddleware(MiddlewareMixin):
             return
 
         return policy.get('effect')
-
