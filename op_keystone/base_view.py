@@ -69,8 +69,11 @@ class BaseView(View):
         else:
             request_params = request.body
 
-        if not request_params and not nullable:
-            raise RequestParamsError(empty=True)
+        if not request_params:
+            if not nullable:
+                raise RequestParamsError(empty=True)
+            else:
+                request_params = {}
 
         if not isinstance(request_params, dict):
             request_params = json_loader(request_params)

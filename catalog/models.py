@@ -36,6 +36,10 @@ class Service(models.Model):
 
         for i in ['created_time', 'updated_time']:
             d[i] = tools.datetime_to_humanized(d[i])
+
+        # 附加信息
+        d['endpoint_count'] = Endpoint.objects.filter(service=self.uuid).count()
+
         return d
 
     def __init__(self, *args, **kwargs):

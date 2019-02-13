@@ -57,9 +57,9 @@ class CredenceInvalid(CustomException):
     """
     def __init__(self, empty=False):
         self.code = 403
-        exception_message = 'the user or token in the cookie is invalid'
+        exception_message = 'the token in the header is invalid'
         if empty:
-            exception_message = 'the user or token in the cookie is required'
+            exception_message = 'the token in the header is required'
         super().__init__(exception_message)
 
 

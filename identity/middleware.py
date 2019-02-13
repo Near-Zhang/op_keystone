@@ -34,21 +34,20 @@ class AuthMiddleware(MiddlewareMixin):
         # 登陆凭证校验
         try:
             # 获取登录凭证
-            rq_uuid = request.COOKIES.get('uuid')
-            rq_token = request.COOKIES.get('token')
-            if not rq_uuid or not rq_token:
+            rq_token = request.META.get('HTTP_X_JUNHAI_TOKEN')
+            if not rq_token:
                 raise CredenceInvalid(empty=True)
 
             try:
                 # 检查凭证是否过期
-                token = self.token_model.get_obj(user=rq_uuid, token=rq_token)
+                token = self.token_model.get_obj(token=rq_token)
                 now = tools.get_datetime_with_tz()
                 expire_date = tools.get_datetime_with_tz(token.expire_date)
                 if now > expire_date:
                     raise CustomException()
 
                 # 设置用户信息到请求
-                user = self.user_model.get_obj(uuid=rq_uuid)
+                user = self.user_model.get_obj(uuid=token.user)
                 domain = self.domain_model.get_obj(uuid=user.domain)
                 if not domain.enable or not user.enable:
                     raise CustomException()
@@ -94,7 +93,6 @@ class AuthMiddleware(MiddlewareMixin):
 
             # 将用户所在用户组对应的 role uuid 放入集合
             group_uuid_list = self.m2m_user_group_model.get_field_list('group', user=user_uuid)
-            print(role_uuid_set)
             for group_uuid in group_uuid_list:
                 print(group_uuid)
                 if not self.group_model.get_obj(uuid=group_uuid).enable:

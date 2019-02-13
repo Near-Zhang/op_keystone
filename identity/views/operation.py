@@ -77,8 +77,8 @@ class LoginView(BaseView):
 
                 # 生成浏览器 cookie 所需数据
                 data = {
-                    "uuid": user.uuid,
                     "token": token,
+                    "uuid": user.uuid,
                     "name": user.name,
                     "expire_date": tools.datetime_to_timestamp(expire_date)
                 }
@@ -137,10 +137,8 @@ class PasswordView(BaseView):
 
             # user 对象更新
             necessary_opts_dict['updated_by'] = request.user.uuid
-            for k in necessary_opts_dict:
-                setattr(user, k, necessary_opts_dict[k])
-            user.validate_password()
-            self.user_model.save(user)
+            check_methods = ('validate_password',)
+            self.user_model.update_obj(user, check_methods=check_methods, **necessary_opts_dict)
 
             # 获取和更新 token 对象
             user = request.user

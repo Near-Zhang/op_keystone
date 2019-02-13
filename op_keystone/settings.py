@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 
 import os
 from config import *
+from corsheaders.defaults import default_headers
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +29,6 @@ SECRET_KEY = 'lp-zkq_mnt27f4#i+ru6=5@h=sln9)8dqdi)v5+n+1_#*sz=^+'
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
-CORS_ORIGIN_ALLOW_ALL = True
 
 # Application definition
 
@@ -101,6 +102,13 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+
+# CORS setting
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_HEADERS = default_headers + (
+    'X-Junhai-Token',
+)
 
 
 # token continuous valid time, unit minutes
