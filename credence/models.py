@@ -12,9 +12,7 @@ class Token(models.Model):
     user = models.CharField(max_length=32, verbose_name='用户UUID')
     token = models.CharField(max_length=32, verbose_name='TOKEN')
     expire_date = models.DateTimeField(verbose_name='过期时间')
-
-    def __str__(self):
-        return '{"user": "%s", "expire_date": "%s", }' %(self.user, datetime_to_humanized(self.expire_date))
+    type = models.IntegerField(verbose_name='类型，0:access_token，2:refresh_token')
 
     def serialize(self):
         """

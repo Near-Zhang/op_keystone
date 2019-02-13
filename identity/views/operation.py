@@ -61,32 +61,95 @@ class LoginView(BaseView):
                 }
                 self.user_behavior_model.update_obj(behavior_obj, **behavior_dict)
 
-                # 生成 token 和 expire_date
-                token = tools.generate_mapping_uuid(user.domain, user.username + tools.datetime_to_humanized(now))
-                expire_date = tools.get_datetime_with_tz(minutes=settings.TOKEN_VALID_TIME)
+                # 生成 access_token 和 access_expire_date
+                access_mapping_str = 'access' + user.username + tools.datetime_to_humanized(now)
+                access_token = tools.generate_mapping_uuid(user.domain, access_mapping_str)
+                access_expire_date = tools.get_datetime_with_tz(minutes=settings.ACCESS_TOKEN_VALID_TIME)
 
-                # 获取用户 token 对象
+                # 生成 refresh_token 和 refresh_expire_date
+                refresh_mapping_str = 'token' + user.username + tools.datetime_to_humanized(now)
+                refresh_token = tools.generate_mapping_uuid(user.domain, refresh_mapping_str)
+                refresh_expire_date = tools.get_datetime_with_tz(minutes=settings.REFRESH_TOKEN_VALID_TIME)
+
+                # 获取用户 access_token 对象
                 try:
-                    token_obj = self.token_model.get_obj(user=user.uuid)
+                    access_token_obj = self.token_model.get_obj(user=user.uuid, type=0)
                 except CustomException:
                     # 不存在新建
-                    self.token_model.create_obj(user=user.uuid, token=token, expire_date=expire_date)
+                    self.token_model.create_obj(user=user.uuid, token=access_token,
+                                                expire_date=access_expire_date, type=0)
                 else:
                     # 存在则更新
-                    self.token_model.update_obj(token_obj, token=token, expire_date=expire_date)
+                    self.token_model.update_obj(access_token_obj, token=access_token, expire_date=access_expire_date)
+
+                # 获取用户 fresh_token 对象
+                try:
+                    refresh_token_obj = self.token_model.get_obj(user=user.uuid, type=1)
+                except CustomException:
+                    # 不存在新建
+                    self.token_model.create_obj(user=user.uuid, token=refresh_token,
+                                                expire_date=refresh_expire_date, type=1)
+                else:
+                    # 存在则更新
+                    self.token_model.update_obj(refresh_token_obj, token=refresh_token, expire_date=refresh_expire_date)
 
                 # 生成浏览器 cookie 所需数据
                 data = {
-                    "token": token,
+                    'access_token': access_token,
+                    'access_expire_date': tools.datetime_to_timestamp(access_expire_date),
+                    'refresh_token': refresh_token,
+                    'refresh_expire_date': tools.datetime_to_timestamp(refresh_expire_date),
                     "uuid": user.uuid,
+                    "domain": user.domain,
                     "name": user.name,
-                    "expire_date": tools.datetime_to_timestamp(expire_date)
                 }
                 return self.standard_response(data)
 
             # 登陆信息校验阶段失败，返回统一信息
-            except CustomException:
+            except CustomException as e:
                 raise LoginFailed()
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class RefreshView(BaseView):
+    """
+    使用 refresh_token 刷新 access_token
+    """
+
+    token_model = DAO('credence.models.Token')
+
+    def post(self, request):
+        try:
+            # refresh_token 参数提取
+            necessary_opts = ['refresh_token']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 检查凭证是否过期
+            rq_token = necessary_opts_dict['refresh_token']
+            refresh_token_obj = self.token_model.get_obj(token=rq_token, type=1)
+            now = tools.get_datetime_with_tz()
+            expire_date = tools.get_datetime_with_tz(refresh_token_obj.expire_date)
+            if now > expire_date:
+                raise CustomException()
+
+            # 刷新 refresh_token 过期时间
+            refresh_expire_date = tools.get_datetime_with_tz(minutes=settings.REFRESH_TOKEN_VALID_TIME)
+            self.token_model.update_obj(refresh_token_obj, expire_date=refresh_expire_date)
+
+            # 获取 access_token，并刷新过期时间
+            access_token_obj = self.token_model.get_obj(user=refresh_token_obj.user, type=0)
+            access_expire_date = tools.get_datetime_with_tz(minutes=settings.ACCESS_TOKEN_VALID_TIME)
+            self.token_model.update_obj(access_token_obj, expire_date=access_expire_date)
+
+            # 返回刷新成功的新信息
+            data = {
+                'access_expire_date': tools.datetime_to_timestamp(access_expire_date),
+                'refresh_expire_date': tools.datetime_to_timestamp(refresh_expire_date)
+            }
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -103,11 +166,13 @@ class LogoutView(BaseView):
         try:
             # 通过用户获取 token 对象
             user = request.user
-            token_ins = self.token_model.get_obj(user=user.uuid)
+            access_token_ins = self.token_model.get_obj(user=user.uuid, type=0)
+            refresh__token_ins = self.token_model.get_obj(user=user.uuid, type=1)
 
             # 更新 token 对象
             expire_date = tools.get_datetime_with_tz()
-            self.token_model.update_obj(token_ins, expire_date=expire_date)
+            self.token_model.update_obj(access_token_ins, expire_date=expire_date)
+            self.token_model.update_obj(refresh__token_ins, expire_date=expire_date)
 
             return self.standard_response('user %s succeed to logout' % user.name)
 

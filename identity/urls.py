@@ -10,5 +10,6 @@ urlpatterns = [
     re_path(r'users/(?P<user_uuid>\w+)/roles', UserToRoleView.as_view()),
     path(r'login/', LoginView.as_view()),
     path(r'logout/', LogoutView.as_view()),
+    path(r'refresh/', RefreshView.as_view()),
     path(r'password/', PasswordView.as_view())
 ]

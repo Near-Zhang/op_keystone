@@ -40,14 +40,14 @@ class AuthMiddleware(MiddlewareMixin):
 
             try:
                 # 检查凭证是否过期
-                token = self.token_model.get_obj(token=rq_token)
+                access_token = self.token_model.get_obj(token=rq_token, type=0)
                 now = tools.get_datetime_with_tz()
-                expire_date = tools.get_datetime_with_tz(token.expire_date)
+                expire_date = tools.get_datetime_with_tz(access_token.expire_date)
                 if now > expire_date:
                     raise CustomException()
 
                 # 设置用户信息到请求
-                user = self.user_model.get_obj(uuid=token.user)
+                user = self.user_model.get_obj(uuid=access_token.user)
                 domain = self.domain_model.get_obj(uuid=user.domain)
                 if not domain.enable or not user.enable:
                     raise CustomException()

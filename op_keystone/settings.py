@@ -112,10 +112,12 @@ CORS_ALLOW_HEADERS = default_headers + (
 
 
 # token continuous valid time, unit minutes
-TOKEN_VALID_TIME = 600
+ACCESS_TOKEN_VALID_TIME = 120
+REFRESH_TOKEN_VALID_TIME = 240
 
 
 # auth route white list
 ROUTE_WHITE_LIST = [
-        ('/identity/login/', 'post')
+        ('/identity/login/', 'post'),
+        ('/identity/refresh/', 'post')
     ]
