@@ -83,6 +83,21 @@ class AuthMiddleware(MiddlewareMixin):
             request_params_dict = BaseView().get_params_dict(request, nullable=True)
             action_info = (view, method, view_params_dict, request_params_dict)
 
+            # 白名单策略处理
+            policy_white_list = [
+                {
+                    'view': 'identity.views.operation.LogoutView',
+                    'method': 'post',
+                    'view_params': [{}],
+                    'request_params': [{}],
+                    'effect': 'allow'
+                }
+            ]
+            for white_policy_dict in policy_white_list:
+                if self.judge_policy(action_info, white_policy_dict):
+                    return
+
+            # 创建存放 role 和 policy 的集合
             role_uuid_set = set([])
             policy_uuid_set = set([])
 
@@ -96,7 +111,6 @@ class AuthMiddleware(MiddlewareMixin):
             for group_uuid in group_uuid_list:
                 print(group_uuid)
                 if not self.group_model.get_obj(uuid=group_uuid).enable:
-                    print('ok')
                     continue
                 g_role_uuid_list = self.m2m_group_role_model.get_field_list('role', group=group_uuid)
                 print(role_uuid_set)

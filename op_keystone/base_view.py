@@ -1,6 +1,6 @@
 from op_keystone.exceptions import *
 from django.views import View
-from django.http import JsonResponse
+from django.http import JsonResponse, QueryDict
 from utils.tools import json_loader
 
 
@@ -62,22 +62,32 @@ class BaseView(View):
         从请求中获取参数字典
         :param request: request object, 请求
         :param nullable: bool, 是否可为空
+        :param form: bool, body 是否为表单数据
         :return: dict, 请求参数字典
         """
+        # 根据方法取出数据
         if request.method == 'GET':
             request_params = request.GET
         else:
             request_params = request.body
 
+        # 判断数据是否为空
         if not request_params:
             if not nullable:
                 raise RequestParamsError(empty=True)
             else:
                 request_params = {}
 
+        # 当数据不为字典时，根据内容类型，转化数据为字典
         if not isinstance(request_params, dict):
-            request_params = json_loader(request_params)
-            if not request_params:
+            content_type = request.META.get('CONTENT_TYPE')
+            if content_type == 'application/x-www-form-urlencoded':
+                request_params = QueryDict(request.body)
+            elif content_type == 'application/json':
+                request_params = json_loader(request_params)
+                if not request_params:
+                    raise RequestParamsError(json=True)
+            else:
                 raise RequestParamsError()
 
         return request_params

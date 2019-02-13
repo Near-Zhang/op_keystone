@@ -71,27 +71,25 @@ class LoginView(BaseView):
                 refresh_token = tools.generate_mapping_uuid(user.domain, refresh_mapping_str)
                 refresh_expire_date = tools.get_datetime_with_tz(minutes=settings.REFRESH_TOKEN_VALID_TIME)
 
-                # 获取用户 access_token 对象
+                # 获取用户 access_token 对象，不存在新建，存在则更新
                 try:
                     access_token_obj = self.token_model.get_obj(user=user.uuid, type=0)
                 except CustomException:
-                    # 不存在新建
                     self.token_model.create_obj(user=user.uuid, token=access_token,
                                                 expire_date=access_expire_date, type=0)
                 else:
-                    # 存在则更新
-                    self.token_model.update_obj(access_token_obj, token=access_token, expire_date=access_expire_date)
+                    self.token_model.update_obj(access_token_obj, token=access_token,
+                                                expire_date=access_expire_date)
 
-                # 获取用户 fresh_token 对象
+                # 获取用户 fresh_token 对象，不存在新建，存在则更新
                 try:
                     refresh_token_obj = self.token_model.get_obj(user=user.uuid, type=1)
                 except CustomException:
-                    # 不存在新建
                     self.token_model.create_obj(user=user.uuid, token=refresh_token,
                                                 expire_date=refresh_expire_date, type=1)
                 else:
-                    # 存在则更新
-                    self.token_model.update_obj(refresh_token_obj, token=refresh_token, expire_date=refresh_expire_date)
+                    self.token_model.update_obj(refresh_token_obj, token=refresh_token,
+                                                expire_date=refresh_expire_date)
 
                 # 生成浏览器 cookie 所需数据
                 data = {

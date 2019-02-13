@@ -112,8 +112,8 @@ CORS_ALLOW_HEADERS = default_headers + (
 
 
 # token continuous valid time, unit minutes
-ACCESS_TOKEN_VALID_TIME = 120
-REFRESH_TOKEN_VALID_TIME = 240
+ACCESS_TOKEN_VALID_TIME = 60
+REFRESH_TOKEN_VALID_TIME = 2 * ACCESS_TOKEN_VALID_TIME
 
 
 # auth route white list

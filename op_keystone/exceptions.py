@@ -97,16 +97,18 @@ class RequestParamsError(CustomException):
     """
     从请求中提取的参数有错误
     """
-    def __init__(self, empty=False, opt=None, invalid=None):
+    def __init__(self, empty=False, json=False, opt=None, invalid=None):
         self.code = 400
         if empty:
             exception_message = 'request params is empty'
+        elif json:
+            exception_message = 'request params is not a standard json'
         elif opt and not invalid:
             exception_message = 'the %s of request params is missing or none' % opt
         elif opt and invalid:
             exception_message = 'the %s of request params is not in range' % opt
         else:
-            exception_message = 'request params is not a standard json'
+            exception_message = 'request params is not in the correct content type'
         super().__init__(exception_message)
 
 

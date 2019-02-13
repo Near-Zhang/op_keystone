@@ -50,7 +50,7 @@ class DomainsView(BaseView):
 
             # 定义参数提取列表
             necessary_opts = ['name', 'company']
-            extra_opts = ['is_main', 'enable', 'comment']
+            extra_opts = ['enable', 'comment']
 
             # 参数提取
             request_params = self.get_params_dict(request)
@@ -84,7 +84,7 @@ class DomainsView(BaseView):
             necessary_opts = ['uuid']
             extra_opts = [
                 'name', 'company', 'enable',
-                'is_main', 'comment'
+                'comment'
             ]
 
             # 参数提取
@@ -123,7 +123,7 @@ class DomainsView(BaseView):
             deleted_obj = self.domain_model.delete_obj(**necessary_opts_dict)
 
             # 返回成功删除
-            return self.standard_response('succeed to delete %s' % deleted_obj.name)
+            return self.standard_response('succeed to delete domain %s' % deleted_obj.name)
 
         except CustomException as e:
             return self.exception_to_response(e)
