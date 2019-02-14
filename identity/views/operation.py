@@ -186,7 +186,7 @@ class PasswordView(BaseView):
     user_model = DAO('identity.models.User')
     token_model = DAO('credence.models.Token')
 
-    def put(self, request):
+    def post(self, request):
         try:
             # 参数提取
             necessary_opts = ['origin_password', 'password']

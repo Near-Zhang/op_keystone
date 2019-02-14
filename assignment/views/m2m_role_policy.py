@@ -1,6 +1,7 @@
-from op_keystone.exceptions import CustomException
+from op_keystone.exceptions import *
 from op_keystone.base_view import BaseView
 from utils.dao import DAO
+from utils import tools
 
 
 class M2MRolePolicyView(BaseView):
@@ -20,60 +21,76 @@ class RoleToPolicyView(M2MRolePolicyView):
 
     def get(self, request, role_uuid):
         try:
-            # 获取最新 policy 列表
+            # 保证 role 存在
             self.role_model.get_obj(uuid=role_uuid)
+
+            # 获取最新 policy 列表
             policy_uuid_list = self.m2m_model.get_field_list('policy', role=role_uuid)
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
-            return self.standard_response(policy_dict_list)
+            # 返回最新 policy 列表
+            data = tools.paging_list(policy_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
 
     def post(self, request, role_uuid):
         try:
+            # 保证 role 存在
+            role_obj = self.role_model.get_obj(uuid=role_uuid)
+
             # 提取参数
-            policy_opts = ['policies']
+            policy_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             policy_opts_dict = self.extract_opts(request_params, policy_opts)
 
             # 获取需要添加的列表
-            self.role_model.get_obj(uuid=role_uuid)
-            policy_uuid_set = set(policy_opts_dict['policies'])
+            policy_uuid_set = set(policy_opts_dict['uuid_list'])
             old_policy_uuid_set = set(self.m2m_model.get_field_list('policy', role=role_uuid))
             add_policy_uuid_list = list(policy_uuid_set - old_policy_uuid_set)
 
-            # 添加多对多关系
+            # 保证 policy 存在且是相同 domain 或者是内置，然后添加多对多关系
             for policy_uuid in add_policy_uuid_list:
-                self.policy_model.get_obj(uuid=policy_uuid)
+                try:
+                    self.policy_model.get_obj(uuid=policy_uuid, domain=role_obj.domain)
+                except ObjectNotExist:
+                    self.policy_model.get_obj(uuid=policy_uuid, builtin=True)
                 self.m2m_model.create_obj(role=role_uuid, policy=policy_uuid)
 
             # 获取最新 policy 列表
             policy_uuid_list = self.m2m_model.get_field_list('policy', role=role_uuid)
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
-            return self.standard_response(policy_dict_list)
+            # 返回最新 policy 列表
+            data = tools.paging_list(policy_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
 
     def put(self, request, role_uuid):
         try:
+            # 保证 role 存在
+            role_obj = self.role_model.get_obj(uuid=role_uuid)
+
             # 提取参数
-            policy_opts = ['policies']
+            policy_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             policy_opts_dict = self.extract_opts(request_params, policy_opts)
 
             # 获取需要添加和删除的列表
-            self.role_model.get_obj(uuid=role_uuid)
-            policy_uuid_set = set(policy_opts_dict['policies'])
+            policy_uuid_set = set(policy_opts_dict['uuid_list'])
             old_policy_uuid_set = set(self.m2m_model.get_field_list('policy', role=role_uuid))
             add_policy_uuid_list = list(policy_uuid_set - old_policy_uuid_set)
             del_policy_uuid_list = list(old_policy_uuid_set - policy_uuid_set)
 
-            # 添加多对多关系
+            # 保证 policy 存在且是相同 domain 或者是内置，然后添加多对多关系
             for policy_uuid in add_policy_uuid_list:
-                self.policy_model.get_obj(uuid=policy_uuid)
+                try:
+                    self.policy_model.get_obj(uuid=policy_uuid, domain=role_obj.domain)
+                except ObjectNotExist:
+                    self.policy_model.get_obj(uuid=policy_uuid, builtin=True)
                 self.m2m_model.create_obj(role=role_uuid, policy=policy_uuid)
 
             # 删除多对多关系
@@ -83,27 +100,34 @@ class RoleToPolicyView(M2MRolePolicyView):
             policy_uuid_list = self.m2m_model.get_field_list('policy', role=role_uuid)
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
-            return self.standard_response(policy_dict_list)
+            # 返回最新 policy 列表
+            data = tools.paging_list(policy_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
 
     def delete(self, request, role_uuid):
         try:
+            # 保证 role 存在
+            self.role_model.get_obj(uuid=role_uuid)
+
             # 提取参数
-            policy_opts = ['policies']
+            policy_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             policy_opts_dict = self.extract_opts(request_params, policy_opts)
 
             # 删除多对多关系
-            policy_uuid_list = policy_opts_dict['policies']
+            policy_uuid_list = policy_opts_dict['uuid_list']
             self.m2m_model.get_obj_qs(role=role_uuid, policy__in=policy_uuid_list).delete()
 
             # 获取最新 policy 列表
             policy_uuid_list = self.m2m_model.get_field_list('policy', role=role_uuid)
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
-            return self.standard_response(policy_dict_list)
+            # 返回最新 policy 列表
+            data = tools.paging_list(policy_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -116,60 +140,76 @@ class PolicyToRoleView(M2MRolePolicyView):
 
     def get(self, request, policy_uuid):
         try:
-            # 获取最新 role 列表
+            # 保证 policy 存在
             self.policy_model.get_obj(uuid=policy_uuid)
+
+            # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', policy=policy_uuid)
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
 
     def post(self, request, policy_uuid):
         try:
+            # 保证 policy 存在
+            policy_obj = self.policy_model.get_obj(uuid=policy_uuid)
+
             # 提取参数
-            role_opts = ['roles']
+            role_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             role_opts_dict = self.extract_opts(request_params, role_opts)
 
             # 获取需要添加的列表
-            self.policy_model.get_obj(uuid=policy_uuid)
-            role_uuid_set = set(role_opts_dict['roles'])
+            role_uuid_set = set(role_opts_dict['uuid_list'])
             old_role_uuid_set = set(self.m2m_model.get_field_list('role', policy=policy_uuid))
             add_role_uuid_list = list(role_uuid_set - old_role_uuid_set)
 
-            # 添加多对多关系
+            # 保证 role 存在且是相同 domain 或者是内置，然后添加多对多关系
             for role_uuid in add_role_uuid_list:
-                self.role_model.get_obj(uuid=role_uuid)
+                try:
+                    self.role_model.get_obj(uuid=role_uuid, domain=policy_obj.domain)
+                except ObjectNotExist:
+                    self.role_model.get_obj(uuid=role_uuid, builtin=True)
                 self.m2m_model.create_obj(role=role_uuid, policy=policy_uuid)
 
             # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', policy=policy_uuid)
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
 
     def put(self, request, policy_uuid):
         try:
+            # 保证 policy 存在
+            policy_obj = self.policy_model.get_obj(uuid=policy_uuid)
+
             # 提取参数
-            role_opts = ['roles']
+            role_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             role_opts_dict = self.extract_opts(request_params, role_opts)
 
             # 获取需要添加和删除的列表
-            self.policy_model.get_obj(uuid=policy_uuid)
-            role_uuid_set = set(role_opts_dict['roles'])
+            role_uuid_set = set(role_opts_dict['uuid_list'])
             old_role_uuid_set = set(self.m2m_model.get_field_list('role', policy=policy_uuid))
             add_role_uuid_list = list(role_uuid_set - old_role_uuid_set)
             del_role_uuid_list = list(old_role_uuid_set - role_uuid_set)
 
-            # 添加多对多关系
+            # 保证 role 存在且是相同 domain 或者是内置，然后添加多对多关系
             for role_uuid in add_role_uuid_list:
-                self.role_model.get_obj(uuid=role_uuid)
+                try:
+                    self.role_model.get_obj(uuid=role_uuid, domain=policy_obj.domain)
+                except ObjectNotExist:
+                    self.role_model.get_obj(uuid=role_uuid, builtin=True)
                 self.m2m_model.create_obj(role=role_uuid, policy=policy_uuid)
 
             # 删除多对多关系
@@ -179,27 +219,34 @@ class PolicyToRoleView(M2MRolePolicyView):
             role_uuid_list = self.m2m_model.get_field_list('role', policy=policy_uuid)
             role_dict_list = self.policy_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
 
     def delete(self, request, policy_uuid):
         try:
+            # 保证 policy 存在
+            self.policy_model.get_obj(uuid=policy_uuid)
+
             # 提取参数
-            role_opts = ['roles']
+            role_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             role_opts_dict = self.extract_opts(request_params, role_opts)
 
             # 删除多对多关系
-            role_uuid_list = role_opts_dict['roles']
+            role_uuid_list = role_opts_dict['uuid_list']
             self.m2m_model.get_obj_qs(policy=policy_uuid, policy__in=role_uuid_list).delete()
 
             # 获取最新 policy 列表
             role_uuid_list = self.m2m_model.get_field_list('role', policy=policy_uuid)
             role_dict_list = self.policy_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)

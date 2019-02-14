@@ -27,7 +27,9 @@ class UserToRoleView(M2MUserRoleView):
             role_uuid_list = self.m2m_model.get_field_list('role', user=user_uuid)
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -47,7 +49,7 @@ class UserToRoleView(M2MUserRoleView):
             old_role_uuid_set = set(self.m2m_model.get_field_list('role', user=user_uuid))
             add_role_uuid_list = list(role_uuid_set - old_role_uuid_set)
 
-            # 保证角色是同 domain 或者是内置，然后添加多对多关系
+            # 保证 role 存在且是相同 domain 或者是内置，然后添加多对多关系
             for role_uuid in add_role_uuid_list:
                 try:
                     self.role_model.get_obj(uuid=role_uuid, domain=user_obj.domain)
@@ -59,7 +61,9 @@ class UserToRoleView(M2MUserRoleView):
             role_uuid_list = self.m2m_model.get_field_list('role', user=user_uuid)
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -80,7 +84,7 @@ class UserToRoleView(M2MUserRoleView):
             add_role_uuid_list = list(role_uuid_set - old_role_uuid_set)
             del_role_uuid_list = list(old_role_uuid_set - role_uuid_set)
 
-            # 保证角色是同 domain 或者是内置，然后添加多对多关系
+            # 保证 role 存在且是相同 domain 或者是内置，然后添加多对多关系
             for role_uuid in add_role_uuid_list:
                 try:
                     self.role_model.get_obj(uuid=role_uuid, domain=user_obj.domain)
@@ -95,7 +99,9 @@ class UserToRoleView(M2MUserRoleView):
             role_uuid_list = self.m2m_model.get_field_list('role', user=user_uuid)
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -118,7 +124,9 @@ class UserToRoleView(M2MUserRoleView):
             role_uuid_list = self.m2m_model.get_field_list('role', user=user_uuid)
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
-            return self.standard_response(role_dict_list)
+            # 返回最新 role 列表
+            data = tools.paging_list(role_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
