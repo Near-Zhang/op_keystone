@@ -84,16 +84,7 @@ class AuthMiddleware(MiddlewareMixin):
             action_info = (view, method, view_params_dict, request_params_dict)
 
             # 白名单策略处理
-            policy_white_list = [
-                {
-                    'view': 'identity.views.operation.LogoutView',
-                    'method': 'post',
-                    'view_params': [{}],
-                    'request_params': [{}],
-                    'effect': 'allow'
-                }
-            ]
-            for white_policy_dict in policy_white_list:
+            for white_policy_dict in settings.POLICY_WHITE_LIST:
                 if self.judge_policy(action_info, white_policy_dict):
                     return
 
@@ -109,11 +100,9 @@ class AuthMiddleware(MiddlewareMixin):
             # 将用户所在用户组对应的 role uuid 放入集合
             group_uuid_list = self.m2m_user_group_model.get_field_list('group', user=user_uuid)
             for group_uuid in group_uuid_list:
-                print(group_uuid)
                 if not self.group_model.get_obj(uuid=group_uuid).enable:
                     continue
                 g_role_uuid_list = self.m2m_group_role_model.get_field_list('role', group=group_uuid)
-                print(role_uuid_set)
                 role_uuid_set = role_uuid_set | set(g_role_uuid_list)
 
             # 获取所有 role 对应的 policy uuid 放入集合

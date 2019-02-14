@@ -1,6 +1,7 @@
 from op_keystone.exceptions import CustomException
 from op_keystone.base_view import BaseView
 from utils.dao import DAO
+from utils import tools
 
 
 class M2MUserGroupView(BaseView):
@@ -28,7 +29,8 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            return self.standard_response(group_dict_list)
+            data = tools.paging_list(group_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -39,12 +41,12 @@ class UserToGroupView(M2MUserGroupView):
             user_obj = self.user_model.get_obj(uuid=user_uuid)
 
             # 提取参数
-            group_opts = ['groups']
+            group_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             group_opts_dict = self.extract_opts(request_params, group_opts)
 
             # 获取需要添加的 group uuid 列表
-            group_uuid_set = set(group_opts_dict['groups'])
+            group_uuid_set = set(group_opts_dict['uuid_list'])
             old_group_uuid_set = set(self.m2m_model.get_field_list('group', user=user_uuid))
             add_group_uuid_list = list(group_uuid_set - old_group_uuid_set)
 
@@ -58,7 +60,8 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            return self.standard_response(group_dict_list)
+            data = tools.paging_list(group_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -69,12 +72,12 @@ class UserToGroupView(M2MUserGroupView):
             user_obj = self.user_model.get_obj(uuid=user_uuid)
 
             # 提取参数
-            group_opts = ['groups']
+            group_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             group_opts_dict = self.extract_opts(request_params, group_opts)
 
             # 获取需要添加和删除的 group uuid 列表
-            group_uuid_set = set(group_opts_dict['groups'])
+            group_uuid_set = set(group_opts_dict['uuid_list'])
             old_group_uuid_set = set(self.m2m_model.get_field_list('group', user=user_uuid))
             add_group_uuid_list = list(group_uuid_set - old_group_uuid_set)
             del_group_uuid_list = list(old_group_uuid_set - group_uuid_set)
@@ -92,7 +95,8 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            return self.standard_response(group_dict_list)
+            data = tools.paging_list(group_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -103,12 +107,12 @@ class UserToGroupView(M2MUserGroupView):
             self.user_model.get_obj(uuid=user_uuid)
 
             # 提取参数
-            group_opts = ['groups']
+            group_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             group_opts_dict = self.extract_opts(request_params, group_opts)
 
             # 获取需要删除的 group uuid 列表
-            group_uuid_list = group_opts_dict['groups']
+            group_uuid_list = group_opts_dict['uuid_list']
 
             # 删除多对多关系
             self.m2m_model.get_obj_qs(user=user_uuid, group__in=group_uuid_list).delete()
@@ -118,7 +122,8 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            return self.standard_response(group_dict_list)
+            data = tools.paging_list(group_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -139,7 +144,8 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            return self.standard_response(user_dict_list)
+            data = tools.paging_list(user_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -150,12 +156,12 @@ class GroupToUserView(M2MUserGroupView):
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 提取参数
-            user_opts = ['users']
+            user_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             user_opts_dict = self.extract_opts(request_params, user_opts)
 
             # 获取需要添加的 user uuid 列表
-            user_uuid_set = set(user_opts_dict['users'])
+            user_uuid_set = set(user_opts_dict['uuid_list'])
             old_user_uuid_set = set(self.m2m_model.get_field_list('user', group=group_uuid))
             add_user_uuid_list = list(user_uuid_set - old_user_uuid_set)
 
@@ -169,7 +175,8 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            return self.standard_response(user_dict_list)
+            data = tools.paging_list(user_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -180,12 +187,12 @@ class GroupToUserView(M2MUserGroupView):
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 提取参数
-            user_opts = ['users']
+            user_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             user_opts_dict = self.extract_opts(request_params, user_opts)
 
             # 获取需要添加和删除的 user uuid 列表
-            user_uuid_set = set(user_opts_dict['users'])
+            user_uuid_set = set(user_opts_dict['uuid_list'])
             old_user_uuid_set = set(self.m2m_model.get_field_list('user', group=group_uuid))
             add_user_uuid_list = list(user_uuid_set - old_user_uuid_set)
             del_user_uuid_list = list(old_user_uuid_set - user_uuid_set)
@@ -203,7 +210,8 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            return self.standard_response(user_dict_list)
+            data = tools.paging_list(user_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -214,12 +222,12 @@ class GroupToUserView(M2MUserGroupView):
             self.group_model.get_obj(uuid=group_uuid)
 
             # 提取参数
-            user_opts = ['users']
+            user_opts = ['uuid_list']
             request_params = self.get_params_dict(request)
             user_opts_dict = self.extract_opts(request_params, user_opts)
 
             # 获取需要删除的 user uuid 列表
-            user_uuid_list = user_opts_dict['users']
+            user_uuid_list = user_opts_dict['uuid_list']
 
             # 删除多对多关系
             self.m2m_model.get_obj_qs(group=group_uuid, group__in=user_uuid_list).delete()
@@ -229,7 +237,8 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.group_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            return self.standard_response(user_dict_list)
+            data = tools.paging_list(user_dict_list, total=True)
+            return self.standard_response(data)
 
         except CustomException as e:
             return self.exception_to_response(e)

@@ -2,7 +2,7 @@ from op_keystone.exceptions import *
 from django.views import View
 from django.http import JsonResponse, QueryDict
 from utils.tools import json_loader
-
+import re
 
 class BaseView(View):
     """
@@ -81,9 +81,10 @@ class BaseView(View):
         # 当数据不为字典时，根据内容类型，转化数据为字典
         if not isinstance(request_params, dict):
             content_type = request.META.get('CONTENT_TYPE')
-            if content_type == 'application/x-www-form-urlencoded':
+            print(content_type)
+            if re.search('application/x-www-form-urlencoded', content_type):
                 request_params = QueryDict(request.body)
-            elif content_type == 'application/json':
+            elif re.search('application/json', content_type):
                 request_params = json_loader(request_params)
                 if not request_params:
                     raise RequestParamsError(json=True)

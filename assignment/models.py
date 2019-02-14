@@ -14,7 +14,6 @@ class Role(models.Model):
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')
     domain = models.CharField(max_length=32, verbose_name='归属域UUID')
-    description = models.CharField(max_length=256, verbose_name='描述')
 
     # 附加字段
     builtin = models.BooleanField(default=False, verbose_name='是否内置')

@@ -118,6 +118,17 @@ REFRESH_TOKEN_VALID_TIME = 2 * ACCESS_TOKEN_VALID_TIME
 
 # auth route white list
 ROUTE_WHITE_LIST = [
-        ('/identity/login/', 'post'),
-        ('/identity/refresh/', 'post')
-    ]
+    ('/identity/login/', 'post'),
+    ('/identity/refresh/', 'post')
+]
+
+# auth policy white list
+POLICY_WHITE_LIST = [
+    {
+        'view': 'identity.views.operation.LogoutView',
+        'method': 'post',
+        'view_params': [{}],
+        'request_params': [{}],
+        'effect': 'allow'
+    }
+]

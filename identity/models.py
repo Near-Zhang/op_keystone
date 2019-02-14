@@ -204,7 +204,7 @@ class Group(models.Model):
         """
         if M2MUserGroup.objects.filter(group=self.uuid).count() > 0:
             raise DatabaseError('group are referenced by users', self.__class__.__name__)
-        M2MUserRole.objects.filter(group=self.uuid).delete()
+        M2MGroupRole.objects.filter(group=self.uuid).delete()
 
 
 class M2MUserGroup(models.Model):
