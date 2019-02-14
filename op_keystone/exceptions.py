@@ -55,11 +55,13 @@ class CredenceInvalid(CustomException):
     """
     校验凭证无效
     """
-    def __init__(self, empty=False):
+    def __init__(self, empty=False, refresh=False):
         self.code = 403
-        exception_message = 'the token in the header is invalid'
+        exception_message = 'the access token in the header is invalid'
         if empty:
-            exception_message = 'the token in the header is required'
+            exception_message = 'the access token in the header is required'
+        elif refresh:
+            exception_message = 'the refresh token is invalid'
         super().__init__(exception_message)
 
 

@@ -85,7 +85,6 @@ class Project(models.Model):
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='项目名')
     domain = models.CharField(max_length=32, verbose_name='归属域UUID')
-    description = models.CharField(max_length=256, verbose_name='描述')
 
     # 附加字段
     enable = models.BooleanField(default=True, verbose_name='是否启用')

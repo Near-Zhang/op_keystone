@@ -1,4 +1,4 @@
-from op_keystone.exceptions import CustomException
+from op_keystone.exceptions import *
 from op_keystone.base_view import BaseView
 from utils.dao import DAO
 
@@ -20,8 +20,10 @@ class GroupToRoleView(M2MGroupRoleView):
 
     def get(self, request, group_uuid):
         try:
-            # 获取最新 role 列表
+            # 保证 group 存在
             self.group_model.get_obj(uuid=group_uuid)
+
+            # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', group=group_uuid)
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
@@ -32,6 +34,9 @@ class GroupToRoleView(M2MGroupRoleView):
 
     def post(self, request, group_uuid):
         try:
+            # 保证 group 存在
+            group_obj = self.group_model.get_obj(uuid=group_uuid)
+
             # 提取参数
             role_opts = ['roles']
             request_params = self.get_params_dict(request)
@@ -43,9 +48,12 @@ class GroupToRoleView(M2MGroupRoleView):
             old_role_uuid_set = set(self.m2m_model.get_field_list('role', group=group_uuid))
             add_role_uuid_list = list(role_uuid_set - old_role_uuid_set)
 
-            # 添加多对多关系
+            # 保证角色是同 domain 或者是内置，然后添加多对多关系
             for role_uuid in add_role_uuid_list:
-                self.role_model.get_obj(uuid=role_uuid)
+                try:
+                    self.role_model.get_obj(uuid=role_uuid, domain=group_obj.domain)
+                except ObjectNotExist:
+                    self.role_model.get_obj(uuid=role_uuid, builtin=True)
                 self.m2m_model.create_obj(group=group_uuid, role=role_uuid)
 
             # 获取最新 role 列表
@@ -59,6 +67,9 @@ class GroupToRoleView(M2MGroupRoleView):
 
     def put(self, request, group_uuid):
         try:
+            # 保证 group 存在
+            group_obj = self.group_model.get_obj(uuid=group_uuid)
+
             # 提取参数
             role_opts = ['roles']
             request_params = self.get_params_dict(request)
@@ -71,9 +82,12 @@ class GroupToRoleView(M2MGroupRoleView):
             add_role_uuid_list = list(role_uuid_set - old_role_uuid_set)
             del_role_uuid_list = list(old_role_uuid_set - role_uuid_set)
 
-            # 添加多对多关系
+            # 保证角色是同 domain 或者是内置，然后添加多对多关系
             for role_uuid in add_role_uuid_list:
-                self.role_model.get_obj(uuid=role_uuid)
+                try:
+                    self.role_model.get_obj(uuid=role_uuid, domain=group_obj.domain)
+                except ObjectNotExist:
+                    self.role_model.get_obj(uuid=role_uuid, builtin=True)
                 self.m2m_model.create_obj(group=group_uuid, role=role_uuid)
 
             # 删除多对多关系
@@ -96,8 +110,8 @@ class GroupToRoleView(M2MGroupRoleView):
             role_opts_dict = self.extract_opts(request_params, role_opts)
 
             # 删除多对多关系
-            role_uuid_list = role_opts_dict['roles']
-            self.m2m_model.get_obj_qs(group=group_uuid, role__in=role_uuid_list).delete()
+            del_role_uuid_list = role_opts_dict['roles']
+            self.m2m_model.get_obj_qs(group=group_uuid, role__in=del_role_uuid_list).delete()
 
             # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', group=group_uuid)

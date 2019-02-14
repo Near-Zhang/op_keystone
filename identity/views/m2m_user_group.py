@@ -230,11 +230,11 @@ class GroupToUserView(M2MUserGroupView):
             user_uuid_list = user_opts_dict['uuid_list']
 
             # 删除多对多关系
-            self.m2m_model.get_obj_qs(group=group_uuid, group__in=user_uuid_list).delete()
+            self.m2m_model.get_obj_qs(group=group_uuid, user__in=user_uuid_list).delete()
 
             # 获取最新 user 列表
             user_uuid_list = self.m2m_model.get_field_list('user', group=group_uuid)
-            user_dict_list = self.group_model.get_dict_list(uuid__in=user_uuid_list)
+            user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
             data = tools.paging_list(user_dict_list, total=True)

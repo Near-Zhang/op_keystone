@@ -47,7 +47,7 @@ class ProjectsView(BaseView):
     def post(self, request):
         try:
             # 定义参数提取列表
-            necessary_opts = ['name', 'description']
+            necessary_opts = ['name']
             extra_opts = ['enable', 'comment']
 
             # 云管理员的参数提取列表补充
@@ -84,9 +84,7 @@ class ProjectsView(BaseView):
             # 定义参数提取列表
             necessary_opts = ['uuid']
             extra_opts = [
-                'name', 'description', 'enable',
-                'comment'
-            ]
+                'name', 'enable', 'comment']
 
             # 设置 domain 字段过滤参数和云管理员的参数提取列表补充
             if request.cloud_admin:

@@ -131,7 +131,7 @@ class RefreshView(BaseView):
             now = tools.get_datetime_with_tz()
             expire_date = tools.get_datetime_with_tz(refresh_token_obj.expire_date)
             if now > expire_date:
-                raise CustomException()
+                raise CredenceInvalid(refresh=True)
 
             # 刷新 refresh_token 过期时间
             refresh_expire_date = tools.get_datetime_with_tz(minutes=settings.REFRESH_TOKEN_VALID_TIME)
