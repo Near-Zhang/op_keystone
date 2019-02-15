@@ -11,12 +11,14 @@ class RoleToGroupView(M2MGroupRoleView):
     def get(self, request, role_uuid):
         try:
             # 保证 role 存在
-            self.role_model.get_obj(uuid=role_uuid)
+            group_obj = self.role_model.get_obj(uuid=role_uuid)
 
-            # 获取最新 group 列表
-            self.role_model.get_obj(uuid=role_uuid)
+            # 获取最新 group 列表，如果登录用户非云管理员，且 role 是内置，筛选出当前登录用户相同 domain 的 group
             group_uuid_list = self.m2m_model.get_field_list('group', role=role_uuid)
-            group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
+            if not request.cloud_admin and group_obj.builtin:
+                group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list, domain=request.user.domain)
+            else:
+                group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
             data = tools.paging_list(group_dict_list, total=True)
