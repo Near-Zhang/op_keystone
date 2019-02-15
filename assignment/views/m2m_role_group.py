@@ -50,7 +50,7 @@ class RoleToGroupView(M2MGroupRoleView):
 
             # 获取最新 group 列表
             group_uuid_list = self.m2m_model.get_field_list('group', role=role_uuid)
-            group_dict_list = self.role_model.get_dict_list(uuid__in=group_uuid_list)
+            group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
             data = tools.paging_list(group_dict_list, total=True)
@@ -88,7 +88,7 @@ class RoleToGroupView(M2MGroupRoleView):
 
             # 获取最新 role 列表
             group_uuid_list = self.m2m_model.get_field_list('group', role=role_uuid)
-            group_dict_list = self.role_model.get_dict_list(uuid__in=group_uuid_list)
+            group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
             data = tools.paging_list(group_dict_list, total=True)
@@ -109,11 +109,11 @@ class RoleToGroupView(M2MGroupRoleView):
 
             # 删除多对多关系
             group_uuid_list = group_opts_dict['uuid_list']
-            self.m2m_model.get_obj_qs(role=role_uuid, role__in=group_uuid_list).delete()
+            self.m2m_model.get_obj_qs(role=role_uuid, group__in=group_uuid_list).delete()
 
             # 获取最新 role 列表
             group_uuid_list = self.m2m_model.get_field_list('group', role=role_uuid)
-            group_dict_list = self.role_model.get_dict_list(uuid__in=group_uuid_list)
+            group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
             data = tools.paging_list(group_dict_list, total=True)

@@ -109,11 +109,11 @@ class RoleToUserView(M2MUserRoleView):
 
             # 删除多对多关系
             user_uuid_list = user_opts_dict['uuid_list']
-            self.m2m_model.get_obj_qs(role=role_uuid, role__in=user_uuid_list).delete()
+            self.m2m_model.get_obj_qs(role=role_uuid, user__in=user_uuid_list).delete()
 
-            # 获取最新 role 列表
+            # 获取最新 user 列表
             user_uuid_list = self.m2m_model.get_field_list('user', role=role_uuid)
-            user_dict_list = self.role_model.get_dict_list(uuid__in=user_uuid_list)
+            user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
             data = tools.paging_list(user_dict_list, total=True)

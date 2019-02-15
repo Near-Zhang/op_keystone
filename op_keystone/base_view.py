@@ -81,7 +81,6 @@ class BaseView(View):
         # 当数据不为字典时，根据内容类型，转化数据为字典
         if not isinstance(request_params, dict):
             content_type = request.META.get('CONTENT_TYPE')
-            print(content_type)
             if re.search('application/x-www-form-urlencoded', content_type):
                 request_params = QueryDict(request.body)
             elif re.search('application/json', content_type):
