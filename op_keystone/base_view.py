@@ -105,7 +105,8 @@ class BaseView(View):
         for opt in opts_list:
             v = request_params.get(opt)
             if v is not None:
-                extract_dict[opt] = v
+                std_opt = opt.replace('-', '_')
+                extract_dict[std_opt] = v
             elif necessary:
                 raise RequestParamsError(opt=opt)
         return extract_dict

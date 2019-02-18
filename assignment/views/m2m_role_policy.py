@@ -238,11 +238,11 @@ class PolicyToRoleView(M2MRolePolicyView):
 
             # 删除多对多关系
             role_uuid_list = role_opts_dict['uuid_list']
-            self.m2m_model.get_obj_qs(policy=policy_uuid, policy__in=role_uuid_list).delete()
+            self.m2m_model.get_obj_qs(policy=policy_uuid, role__in=role_uuid_list).delete()
 
             # 获取最新 policy 列表
             role_uuid_list = self.m2m_model.get_field_list('role', policy=policy_uuid)
-            role_dict_list = self.policy_model.get_dict_list(uuid__in=role_uuid_list)
+            role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
             # 返回最新 role 列表
             data = tools.paging_list(role_dict_list, total=True)

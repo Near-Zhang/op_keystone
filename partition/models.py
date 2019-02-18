@@ -13,6 +13,7 @@ class Domain(models.Model):
     # 必要字段
     name = models.CharField(max_length=64, unique=True, verbose_name='域名')
     company = models.CharField(max_length=64, verbose_name='公司')
+    agent = models.CharField(max_length=64, verbose_name='代理人')
 
     # 附加字段
     is_main = models.BooleanField(default=False, verbose_name='是否为主域')
@@ -61,18 +62,24 @@ class Domain(models.Model):
 
     def pre_save(self):
         """
-        保存前，检查 main domain 是否唯一
+        保存前，检查是否为 main domain 的存在，和阻止创建 main domain
         :return:
         """
-        if self.is_main and self.__class__.objects.filter(is_main=True).count() > 0:
-            raise DatabaseError('not the single main domain', self.__class__.__name__)
+        main_domain_qs = self.__class__.objects.filter(is_main=True)
+        if main_domain_qs.count() < 1:
+            raise DatabaseError('the main domain is not existed', self.__class__.__name__)
+        elif main_domain_qs.count() > 1:
+            raise DatabaseError('more than one main domain', self.__class__.__name__)
+        elif self.is_main and self.uuid != main_domain_qs.first().uuid:
+            raise DatabaseError('the main domain is already existed ', self.__class__.__name__)
 
     def pre_delete(self):
         """
         删除前，检查和删除对象的对外关联
         :return:
         """
-        pass
+        if self.is_main:
+            raise DatabaseError('this is main domain', self.__class__.__name__)
 
 
 class Project(models.Model):

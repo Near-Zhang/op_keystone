@@ -130,22 +130,22 @@ def import_string(dotted_path):
         return None
 
 
-def paging_list(total_list, page=1, pagesize=20, total=False):
+def paging_list(total_list, page=1, page_size=20, total=False):
     """
      对于总数据列表进行分页，并返回当前页的数据列表
     :param total_list: list, 数据总列表
     :param page: int, 页数
-    :param pagesize: int, 页大小
+    :param page_size: int, 页大小
     :param total: bool, 是否返回所有数据
     :return: dict, 包含数据总数、当前页数据列表的字典
     """
     total_count = len(total_list)
     if total:
         page = 1
-        pagesize = total_count
+        page_size = total_count
 
-    start_index = (int(page) - 1) * int(pagesize)
-    end_index = start_index + int(pagesize)
+    start_index = (int(page) - 1) * int(page_size)
+    end_index = start_index + int(page_size)
     current_page_list = total_list[start_index:end_index]
 
     return {

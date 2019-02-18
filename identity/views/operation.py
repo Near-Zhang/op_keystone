@@ -91,7 +91,7 @@ class LoginView(BaseView):
                     self.token_model.update_obj(refresh_token_obj, token=refresh_token,
                                                 expire_date=refresh_expire_date)
 
-                # 生成浏览器 cookie 所需数据
+                # 生成浏览器 cookie 所需数据并返回
                 data = {
                     'access_token': access_token,
                     'access_expire_date': tools.datetime_to_timestamp(access_expire_date),
@@ -172,6 +172,7 @@ class LogoutView(BaseView):
             self.token_model.update_obj(access_token_ins, expire_date=expire_date)
             self.token_model.update_obj(refresh__token_ins, expire_date=expire_date)
 
+            # 返回登出成功
             return self.standard_response('user %s succeed to logout' % user.name)
 
         except CustomException as e:
@@ -203,12 +204,14 @@ class PasswordView(BaseView):
             check_methods = ('validate_password',)
             self.user_model.update_obj(user, check_methods=check_methods, **necessary_opts_dict)
 
-            # 获取和更新 token 对象
+            # 获取和失效 token 对象
             user = request.user
-            token_ins = self.token_model.get_obj(user=user.uuid)
+            token_obj_qs = self.token_model.get_obj_qs(user=user.uuid)
             expire_date = tools.get_datetime_with_tz()
-            self.token_model.update_obj(token_ins, expire_date=expire_date)
+            for obj in token_obj_qs:
+                self.token_model.update_obj(obj, expire_date=expire_date)
 
+            # 返回密码修改成功
             return self.standard_response('succeed to change password')
 
         except CustomException as e:

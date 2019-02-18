@@ -33,7 +33,7 @@ class PoliciesView(BaseView):
                 return self.standard_response(obj.serialize())
 
             # 页码参数提取
-            page_opts = ['page', 'pagesize']
+            page_opts = ['page', 'page-size']
             page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
 
             # 当前页数据获取，合并自定义角色和内置角色

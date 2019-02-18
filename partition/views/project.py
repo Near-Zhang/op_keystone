@@ -30,7 +30,7 @@ class ProjectsView(BaseView):
                 return self.standard_response(obj.serialize())
 
             # 获取多个对象，提取页码参数
-            page_opts = ['page', 'pagesize']
+            page_opts = ['page', 'page-size']
             request_params = self.get_params_dict(request, nullable=True)
             page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
 

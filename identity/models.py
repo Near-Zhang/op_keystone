@@ -97,9 +97,18 @@ class User(models.Model):
         保存前，检查 domain 是否存在，且其中 main user 是否唯一
         :return:
         """
-        DAO('partition.models.Domain').get_obj(uuid=self.domain)
-        if self.is_main and self.__class__.objects.filter(domain=self.domain, is_main=True).count() > 0:
-            raise DatabaseError('not the single main user of domain %s' % self.domain, self.__class__.__name__)
+        domain_obj = DAO('partition.models.Domain').get_obj(uuid=self.domain)
+        main_user_qs = self.__class__.objects.filter(domain=self.domain, is_main=True)
+
+        if main_user_qs.count() < 1:
+            if not self.is_main:
+                raise DatabaseError('main user of domain %s is not existed' % domain_obj.name, self.__class__.__name__)
+        elif main_user_qs.count() > 1:
+            raise DatabaseError('more than one main user of domain %s' % domain_obj.name, self.__class__.__name__)
+        elif self.is_main and self.uuid != main_user_qs.first().uuid:
+            raise DatabaseError('main user of domain %s is already existed' % domain_obj.name, self.__class__.__name__)
+        elif domain_obj.is_main and not self.is_main and self.uuid == main_user_qs.first().uuid:
+            raise DatabaseError('this is main user of domain %s' % domain_obj.name, self.__class__.__name__)
 
     def pre_delete(self):
         """
@@ -107,7 +116,7 @@ class User(models.Model):
         :return:
         """
         if self.is_main:
-            raise DatabaseError('user %s is the main user' % self.name, self.__class__.__name__)
+            raise DatabaseError('this is the main user', self.__class__.__name__)
         M2MUserGroup.objects.filter(user=self.uuid).delete()
         M2MUserRole.objects.filter(user=self.uuid).delete()
 

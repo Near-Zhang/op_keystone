@@ -29,7 +29,7 @@ class DomainsView(BaseView):
                 return self.standard_response(obj.serialize())
 
             # 页码参数提取
-            page_opts = ['page', 'pagesize']
+            page_opts = ['page', 'page-size']
             page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
 
             # 当前页数据获取
@@ -49,7 +49,7 @@ class DomainsView(BaseView):
                 raise PermissionDenied()
 
             # 定义参数提取列表
-            necessary_opts = ['name', 'company']
+            necessary_opts = ['name', 'company', 'agent']
             extra_opts = ['enable', 'comment']
 
             # 参数提取
@@ -84,7 +84,7 @@ class DomainsView(BaseView):
             necessary_opts = ['uuid']
             extra_opts = [
                 'name', 'company', 'enable',
-                'comment'
+                'comment', 'agent'
             ]
 
             # 参数提取
@@ -119,8 +119,9 @@ class DomainsView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            # 对象获取
-            deleted_obj = self.domain_model.delete_obj(**necessary_opts_dict)
+            # 对象删除
+            check_methods = ('pre_delete',)
+            deleted_obj = self.domain_model.delete_obj(check_methods=check_methods, **necessary_opts_dict)
 
             # 返回成功删除
             return self.standard_response('succeed to delete domain %s' % deleted_obj.name)
