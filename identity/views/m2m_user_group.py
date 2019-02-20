@@ -29,7 +29,7 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            data = tools.paging_list(group_dict_list, total=True)
+            data = tools.paging_list(group_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -60,7 +60,7 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            data = tools.paging_list(group_dict_list, total=True)
+            data = tools.paging_list(group_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -95,7 +95,7 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            data = tools.paging_list(group_dict_list, total=True)
+            data = tools.paging_list(group_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -122,7 +122,7 @@ class UserToGroupView(M2MUserGroupView):
             group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
 
             # 返回最新 group 列表
-            data = tools.paging_list(group_dict_list, total=True)
+            data = tools.paging_list(group_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -144,7 +144,7 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -175,7 +175,7 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -210,7 +210,7 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -237,7 +237,7 @@ class GroupToUserView(M2MUserGroupView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:

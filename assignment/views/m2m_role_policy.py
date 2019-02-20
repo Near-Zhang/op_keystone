@@ -29,7 +29,7 @@ class RoleToPolicyView(M2MRolePolicyView):
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
             # 返回最新 policy 列表
-            data = tools.paging_list(policy_dict_list, total=True)
+            data = tools.paging_list(policy_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -63,7 +63,7 @@ class RoleToPolicyView(M2MRolePolicyView):
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
             # 返回最新 policy 列表
-            data = tools.paging_list(policy_dict_list, total=True)
+            data = tools.paging_list(policy_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -101,7 +101,7 @@ class RoleToPolicyView(M2MRolePolicyView):
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
             # 返回最新 policy 列表
-            data = tools.paging_list(policy_dict_list, total=True)
+            data = tools.paging_list(policy_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -126,7 +126,7 @@ class RoleToPolicyView(M2MRolePolicyView):
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_list)
 
             # 返回最新 policy 列表
-            data = tools.paging_list(policy_dict_list, total=True)
+            data = tools.paging_list(policy_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -148,7 +148,7 @@ class PolicyToRoleView(M2MRolePolicyView):
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
             # 返回最新 role 列表
-            data = tools.paging_list(role_dict_list, total=True)
+            data = tools.paging_list(role_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -182,7 +182,7 @@ class PolicyToRoleView(M2MRolePolicyView):
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
             # 返回最新 role 列表
-            data = tools.paging_list(role_dict_list, total=True)
+            data = tools.paging_list(role_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -220,7 +220,7 @@ class PolicyToRoleView(M2MRolePolicyView):
             role_dict_list = self.policy_model.get_dict_list(uuid__in=role_uuid_list)
 
             # 返回最新 role 列表
-            data = tools.paging_list(role_dict_list, total=True)
+            data = tools.paging_list(role_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -245,7 +245,7 @@ class PolicyToRoleView(M2MRolePolicyView):
             role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
 
             # 返回最新 role 列表
-            data = tools.paging_list(role_dict_list, total=True)
+            data = tools.paging_list(role_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:

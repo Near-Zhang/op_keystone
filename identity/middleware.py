@@ -34,7 +34,7 @@ class AuthMiddleware(MiddlewareMixin):
         # 登陆凭证校验
         try:
             # 获取登录凭证
-            rq_token = request.META.get('HTTP_X_JUNHAI_TOKEN')
+            rq_token = request.META.get(settings.AUTH_HEADER)
             if not rq_token:
                 raise CredenceInvalid(empty=True)
 

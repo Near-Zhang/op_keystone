@@ -9,6 +9,7 @@ class Domain(models.Model):
     class Meta:
         verbose_name = '域'
         db_table = 'domain'
+        ordering=('-is_main',)
 
     # 必要字段
     name = models.CharField(max_length=64, unique=True, verbose_name='域名')
@@ -87,6 +88,7 @@ class Project(models.Model):
     class Meta:
         verbose_name = '项目'
         db_table = 'project'
+        ordering = ('domain',)
         unique_together = ('domain', 'name')
 
     # 必要字段

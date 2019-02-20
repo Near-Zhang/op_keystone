@@ -16,6 +16,7 @@ class User(models.Model):
             ('phone', 'deleted_time'),
             ('email', 'deleted_time')
         ]
+        ordering = ('domain', '-is_main')
 
     # 必要字段
     email = models.CharField(max_length=64, verbose_name='邮箱')

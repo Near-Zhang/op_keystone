@@ -21,7 +21,7 @@ class RoleToUserView(M2MUserRoleView):
                 user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -55,7 +55,7 @@ class RoleToUserView(M2MUserRoleView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -93,7 +93,7 @@ class RoleToUserView(M2MUserRoleView):
             user_dict_list = self.role_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
@@ -118,7 +118,7 @@ class RoleToUserView(M2MUserRoleView):
             user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
 
             # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list, total=True)
+            data = tools.paging_list(user_dict_list)
             return self.standard_response(data)
 
         except CustomException as e:
