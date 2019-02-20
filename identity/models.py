@@ -3,7 +3,7 @@ from op_keystone.exceptions import *
 from django.contrib.auth.password_validation import validate_password as v_password
 from django.core.exceptions import ValidationError
 from utils.dao import DAO
-
+from utils import tools
 
 class User(models.Model):
 

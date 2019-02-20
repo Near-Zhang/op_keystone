@@ -13,8 +13,8 @@ class DomainsView(BaseView):
 
     def get(self, request):
         try:
-            # 非云管理员直接返回当前 domain 信息
-            if not request.cloud_admin:
+            # 域权限级别的请求，直接返回当前 domain 信息
+            if request.privilege_level == 3:
                 obj = self.domain_model.get_obj(uuid=request.user.domain)
                 return self.standard_response(obj.serialize())
 
@@ -44,8 +44,8 @@ class DomainsView(BaseView):
 
     def post(self, request):
         try:
-            # 非云管理员直接进行权限拒绝
-            if not request.cloud_admin:
+            # 域权限级别的请求，直接进行权限拒绝
+            if request.privilege_level == 3:
                 raise PermissionDenied()
 
             # 定义参数提取列表
@@ -76,8 +76,8 @@ class DomainsView(BaseView):
 
     def put(self, request):
         try:
-            # 非云管理员直接进行权限拒绝
-            if not request.cloud_admin:
+            # 域权限级别的请求，直接进行权限拒绝
+            if request.privilege_level == 3:
                 raise PermissionDenied()
 
             # 定义参数提取列表
@@ -91,6 +91,11 @@ class DomainsView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 跨域权限级别的请求，禁止操作主 domain
+            if request.privilege_level == 2:
+                if necessary_opts_dict['uuid'] == request.user.domain:
+                    raise PermissionDenied()
 
             # 对象获取
             obj = self.domain_model.get_obj(**necessary_opts_dict)
@@ -108,8 +113,8 @@ class DomainsView(BaseView):
 
     def delete(self, request):
         try:
-            # 非云管理员直接进行权限拒绝
-            if not request.cloud_admin:
+            # 域权限级别的请求，直接进行权限拒绝
+            if request.privilege_level == 3:
                 raise PermissionDenied()
 
             # 定义参数提取列表
@@ -118,6 +123,11 @@ class DomainsView(BaseView):
             # 参数获取
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 跨域权限级别的请求，禁止操作主 domain
+            if request.privilege_level == 2:
+                if necessary_opts_dict['uuid'] == request.user.domain:
+                    raise PermissionDenied()
 
             # 对象删除
             check_methods = ('pre_delete',)

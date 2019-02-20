@@ -86,7 +86,7 @@ class BaseView(View):
             elif re.search('application/json', content_type):
                 request_params = json_loader(request_params)
                 if not request_params:
-                    raise RequestParamsError(json=True)
+                    raise RequestParamsError(not_json=True)
             else:
                 raise RequestParamsError()
 
@@ -102,11 +102,25 @@ class BaseView(View):
         :return: dict, 提取后的参数字典
         """
         extract_dict = {}
+        validate = False
+
         for opt in opts_list:
-            v = request_params.get(opt)
+            # 获取参数选项的 key，标记是否需要范围验证
+            if type(opt) == dict:
+                validate = True
+                white_pass = opt.get('white')
+                k = opt.get('key')
+            else:
+                k = opt
+
+            # 取值后，判空以及进行范围验证
+            v = request_params.get(k)
             if v is not None:
-                std_opt = opt.replace('-', '_')
-                extract_dict[std_opt] = v
+                if validate:
+                    if (white_pass and v not in opt['values']) or (not white_pass and v in opt.get('values')):
+                        raise RequestParamsError(opt=k, invalid=True)
+                k = k.replace('-', '_')
+                extract_dict[k] = v
             elif necessary:
                 raise RequestParamsError(opt=opt)
         return extract_dict

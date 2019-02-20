@@ -18,7 +18,13 @@ class LoginView(BaseView):
     def post(self, request):
         try:
             # 类型参数提取
-            type_opts = ['type']
+            type_opts = [
+                {
+                    'key': 'type',
+                    'white': True,
+                    'values': ['phone', 'email', 'username']
+                }
+            ]
             request_params = self.get_params_dict(request)
             type_opts_dict = self.extract_opts(request_params, type_opts)
 
@@ -36,7 +42,7 @@ class LoginView(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
             # domain 参数额外处理
-            if necessary_opts_dict.get('domain'):
+            if login_type == 'username':
                 domain_name = necessary_opts_dict.pop('domain')
                 domain = self.domain_model.get_obj(name=domain_name)
                 necessary_opts_dict['domain'] = domain.uuid
@@ -91,6 +97,16 @@ class LoginView(BaseView):
                     self.token_model.update_obj(refresh_token_obj, token=refresh_token,
                                                 expire_date=refresh_expire_date)
 
+                # 获取用户的权限级别
+                domain = self.domain_model.get_obj(uuid=user.domain)
+                if domain.is_main:
+                    if user.is_main:
+                        privilege_level = 1
+                    else:
+                        privilege_level = 2
+                else:
+                    privilege_level = 3
+
                 # 生成浏览器 cookie 所需数据并返回
                 data = {
                     'access_token': access_token,
@@ -98,8 +114,8 @@ class LoginView(BaseView):
                     'refresh_token': refresh_token,
                     'refresh_expire_date': tools.datetime_to_timestamp(refresh_expire_date),
                     "uuid": user.uuid,
-                    "domain": user.domain,
                     "name": user.name,
+                    "privilege_level": privilege_level
                 }
                 return self.standard_response(data)
 

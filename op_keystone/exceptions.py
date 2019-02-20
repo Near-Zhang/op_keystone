@@ -1,5 +1,3 @@
-from utils import tools
-
 class CustomException(Exception):
     """
     自定义异常类，修改了打印时的显示方式
@@ -99,11 +97,11 @@ class RequestParamsError(CustomException):
     """
     从请求中提取的参数有错误
     """
-    def __init__(self, empty=False, json=False, opt=None, invalid=None):
+    def __init__(self, empty=False, not_json=False, opt=None, invalid=None):
         self.code = 400
         if empty:
-            exception_message = 'request params is empty'
-        elif json:
+            exception_message = ''
+        elif not_json:
             exception_message = 'request params is not a standard json'
         elif opt and not invalid:
             exception_message = 'the %s of request params is missing or none' % opt

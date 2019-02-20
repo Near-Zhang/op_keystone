@@ -11,8 +11,8 @@
 *.pot
 *.pyc
 __pycache__
-migrations
 venv
+migrations
 
 ### custom ###
 GeoLite2-City.mmdb

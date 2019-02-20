@@ -1,4 +1,4 @@
-from op_keystone.exceptions import CustomException
+from op_keystone.exceptions import *
 from op_keystone.base_view import BaseView
 from utils import tools
 from utils.dao import DAO
@@ -13,11 +13,11 @@ class ProjectsView(BaseView):
 
     def get(self, request):
         try:
-            # 设置 domain 字段过滤参数
-            if request.cloud_admin:
-                domain_opts_dict = {}
-            else:
+            # 域权限级别的请求设置 domain 字段过滤参数
+            if request.privilege_level == 3:
                 domain_opts_dict = {'domain': request.user.domain}
+            else:
+                domain_opts_dict = {}
 
             # 获取 uuid 参数
             uuid_opts = ['uuid']
@@ -50,8 +50,8 @@ class ProjectsView(BaseView):
             necessary_opts = ['name']
             extra_opts = ['enable', 'comment']
 
-            # 云管理员的参数提取列表补充
-            if request.cloud_admin:
+            # 非域权限级别的请求，进行参数提取列表补充
+            if request.privilege_level < 3:
                 extra_opts.extend([
                     'domain'
                 ])
@@ -60,6 +60,11 @@ class ProjectsView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 跨域权限级别的请求，禁止操作主 domain
+            if request.privilege_level == 2:
+                if necessary_opts_dict['domain'] == request.user.domain:
+                    raise PermissionDenied()
 
             # 参数合成，预设 domain、create_by 的值
             obj_field = {
@@ -86,11 +91,11 @@ class ProjectsView(BaseView):
             extra_opts = [
                 'name', 'enable', 'comment']
 
-            # 设置 domain 字段过滤参数和云管理员的参数提取列表补充
-            if request.cloud_admin:
+            # 非域权限级别的请求，进行参数提取列表补充，否则设置 domain 字段过滤参数
+            if request.privilege_level < 3:
                 domain_opts_dict = {}
                 extra_opts.extend([
-                    'domain', 'is_main'
+                    'domain'
                 ])
             else:
                 domain_opts_dict = {'domain': request.user.domain}
@@ -99,6 +104,11 @@ class ProjectsView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 跨域权限级别的请求，禁止操作主 domain
+            if request.privilege_level == 2:
+                if necessary_opts_dict['domain'] == request.user.domain:
+                    raise PermissionDenied()
 
             # 对象获取
             obj = self.project_model.get_obj(**necessary_opts_dict, **domain_opts_dict)
@@ -116,8 +126,8 @@ class ProjectsView(BaseView):
 
     def delete(self, request):
         try:
-            # 设置 domain 字段过滤参数
-            if request.cloud_admin:
+            # 域权限级别的请求，设置 domain 字段过滤参数
+            if request.privilege_level < 3:
                 domain_opts_dict = {}
             else:
                 domain_opts_dict = {'domain': request.user.domain}
@@ -126,6 +136,11 @@ class ProjectsView(BaseView):
             necessary_opts = ['uuid']
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 跨域权限级别的请求，禁止操作主 domain
+            if request.privilege_level == 2:
+                if necessary_opts_dict['domain'] == request.user.domain:
+                    raise PermissionDenied()
 
             # 对象删除
             deleted_obj = self.project_model.delete_obj(**necessary_opts_dict, **domain_opts_dict)

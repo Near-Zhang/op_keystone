@@ -53,7 +53,18 @@ class AuthMiddleware(MiddlewareMixin):
                     raise CustomException()
                 request.user = user
 
-                # 判断是否为云管理员，并设置标志到请求
+                # 根据 user 和 domain 判定用户的权限级别，并设置标志到请求
+                # 权限级别的对权限的限制大于策略， 权限级别对应：
+                # 1 -> 全局权限级别    2 -> 跨域权限级别   3 -> 域权限级别
+                if domain.is_main:
+                    if user.is_main:
+                        privilege_level = 1
+                    else:
+                        privilege_level = 2
+                else:
+                    privilege_level = 3
+                request.privilege_level = privilege_level
+
                 if user.is_main and domain.is_main:
                     request.cloud_admin = True
                 else:
@@ -69,8 +80,12 @@ class AuthMiddleware(MiddlewareMixin):
 
     def process_view(self, request, callback, callback_args, callback_kwargs):
 
-        # 忽略无需登录的请求
+        # 无需登录的请求忽略鉴权
         if not getattr(request, 'user', None):
+            return
+
+        # 全局权限级别的请求忽略鉴权
+        if request.privilege_level == 1:
             return
 
         # 开始鉴权
