@@ -151,6 +151,25 @@ def paging_list(total_list, page=1, page_size=None):
     }
 
 
+def judge_private_ip(ip):
+    """
+    判断 IP 是否为内网 IP
+    :param ip: str, IP 地址
+    :return: bool
+    """
+    sections = ip.split('.')
+    sections = [ int(s) for s in sections ]
+    private = False
+
+    if sections[0] == 10:
+        private = True
+    elif sections[0] == 172 and 16 <= sections[1] < 32:
+        private = True
+    elif sections[0] == 192 and sections[1] == 168:
+        private = True
+    return private
+
+
 def ip_to_location(ip):
     """
     解析 IP 为其对应的物理位置
@@ -174,5 +193,3 @@ def ip_to_location(ip):
             continue
 
     return ' '.join(location_list)
-
-

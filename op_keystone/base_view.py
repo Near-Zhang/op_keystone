@@ -4,6 +4,7 @@ from django.http import JsonResponse, QueryDict
 from utils.tools import json_loader
 import re
 
+
 class BaseView(View):
     """
     基础视图类，提供返回响应的方法，以及限制非允许方法的请求，提取参数的方法

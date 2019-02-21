@@ -1,6 +1,7 @@
 from op_keystone.exceptions import *
 from op_keystone.base_view import BaseView
 from utils.dao import DAO
+from utils import tools
 
 
 class M2MUserRoleView(BaseView):
@@ -21,7 +22,11 @@ class UserToRoleView(M2MUserRoleView):
     def get(self, request, user_uuid):
         try:
             # 保证 user 存在
-            self.user_model.get_obj(uuid=user_uuid)
+            user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
 
             # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', user=user_uuid)
@@ -38,6 +43,14 @@ class UserToRoleView(M2MUserRoleView):
         try:
             # 保证 user 存在
             user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and user_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']
@@ -72,6 +85,14 @@ class UserToRoleView(M2MUserRoleView):
         try:
             # 保证 user 存在
             user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and user_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']
@@ -109,7 +130,15 @@ class UserToRoleView(M2MUserRoleView):
     def delete(self, request, user_uuid):
         try:
             # 保证 user 存在
-            self.user_model.get_obj(uuid=user_uuid)
+            user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and user_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']

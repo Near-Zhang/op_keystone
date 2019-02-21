@@ -58,7 +58,10 @@ class LoginView(BaseView):
                 # 更新用户行为
                 now = tools.get_datetime_with_tz()
                 remote_ip = request.META.get('REMOTE_ADDR')
-                location = tools.ip_to_location(remote_ip)
+                if tools.judge_private_ip(remote_ip):
+                    location = '内部网络'
+                else:
+                    location = tools.ip_to_location(remote_ip)
                 behavior_obj = self.user_behavior_model.get_obj(user=user.uuid)
                 behavior_dict = {
                     'last_time': now,

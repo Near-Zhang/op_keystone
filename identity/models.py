@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from utils.dao import DAO
 from utils import tools
 
+
 class User(models.Model):
 
     class Meta:
@@ -16,7 +17,7 @@ class User(models.Model):
             ('phone', 'deleted_time'),
             ('email', 'deleted_time')
         ]
-        ordering = ('domain', '-is_main')
+        ordering = ('-domain', '-is_main')
 
     # 必要字段
     email = models.CharField(max_length=64, verbose_name='邮箱')
@@ -66,8 +67,6 @@ class User(models.Model):
 
         # 附加信息
         d['behavior'] = UserBehavior.objects.get(user=self.uuid).serialize()
-        d['groups_count'] = M2MUserGroup.objects.filter(user=self.uuid).count()
-        d['roles_count'] = M2MUserRole.objects.filter(user=self.uuid).count()
 
         return d
 
@@ -156,6 +155,7 @@ class Group(models.Model):
         verbose_name = '用户组'
         db_table = 'group'
         unique_together = ('domain', 'name')
+        ordering = ('-domain',)
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='组名')
@@ -193,10 +193,6 @@ class Group(models.Model):
         for i in ['created_time', 'updated_time']:
             if not d[i] is None:
                 d[i] = tools.datetime_to_humanized(d[i])
-
-        # 附加信息
-        d['users_count'] = M2MUserGroup.objects.filter(group=self.uuid).count()
-        d['roles_count'] = M2MGroupRole.objects.filter(group=self.uuid).count()
 
         return d
 

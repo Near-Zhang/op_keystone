@@ -13,11 +13,11 @@ class PoliciesView(BaseView):
 
     def get(self, request):
         try:
-            # 设置 domain 字段过滤参数
-            if request.cloud_admin:
-                domain_opts_dict = {}
-            else:
+            # 域权限级别的请求，设置 domain 字段过滤参数
+            if request.privilege_level == 3:
                 domain_opts_dict = {'domain': request.user.domain}
+            else:
+                domain_opts_dict = {}
 
             # 获取 uuid 参数
             uuid_opts = ['uuid']
@@ -61,8 +61,8 @@ class PoliciesView(BaseView):
             ]
             extra_opts = ['comment', 'enable']
 
-            # 云管理员的参数提取列表补充
-            if request.cloud_admin:
+            # 非域权限级别的请求，进行参数提取列表补充
+            if request.privilege_level < 3:
                 extra_opts.extend([
                     'domain', 'builtin'
                 ])
@@ -71,6 +71,11 @@ class PoliciesView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 跨域权限级别的请求，禁止创建涉及主 domain 的对象
+            if request.privilege_level == 2:
+                if extra_opts_dict.get('domain') is None or extra_opts_dict.get('domain') == request.user.domain:
+                    raise PermissionDenied()
 
             # 参数合成，预设 domain、create_by 的值，转化字段值为 json 字符串
             obj_field = {
@@ -102,22 +107,27 @@ class PoliciesView(BaseView):
                 'view_params', 'enable', 'comment'
             ]
 
-            # 设置 domain 字段过滤参数和云管理员的参数提取列表补充
-            if request.cloud_admin:
-                domain_opts_dict = {}
+            # 非域权限级别的请求，进行参数提取列表补充
+            if request.privilege_level < 3:
                 extra_opts.extend([
                     'domain', 'builtin'
                 ])
-            else:
-                domain_opts_dict = {'domain': request.user.domain}
 
-            # 参数提取
+            # 参数提取并获取对象
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+            obj = self.policy_model.get_obj(**necessary_opts_dict)
 
-            # 对象获取
-            obj = self.policy_model.get_obj(**necessary_opts_dict, **domain_opts_dict)
+            # 域权限级别的请求，禁止修改前后涉及其他 domain 的对象
+            if request.privilege_level == 3 and obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改前后涉及主 domain 的对象
+            if request.privilege_level == 2:
+                if extra_opts_dict.get('domain') is None or extra_opts_dict.get('domain') == request.user.domain \
+                        or obj.domain == request.user.domain:
+                    raise PermissionDenied()
 
             # 对象更新，转化字段值为 json 字符串
             extra_opts_dict['updated_by'] = request.user.uuid
@@ -136,21 +146,23 @@ class PoliciesView(BaseView):
 
     def delete(self, request):
         try:
-            # 设置 domain 字段过滤参数
-            if request.cloud_admin:
-                domain_opts_dict = {}
-            else:
-                domain_opts_dict = {'domain': request.user.domain}
-
-            # 参数获取
+            # 参数获取并获取对象
             necessary_opts = ['uuid']
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+            obj = self.policy_model.get_obj(**necessary_opts_dict)
+
+            # 域权限级别的请求，禁止删除涉及其他 domain 的对象
+            if request.privilege_level == 3 and obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止删除涉及主 domain 的对象
+            if request.privilege_level == 2 and obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 对象删除
             check_methods = ('pre_delete',)
-            deleted_obj = self.policy_model.delete_obj(check_methods=check_methods, **necessary_opts_dict,
-                                                       **domain_opts_dict)
+            deleted_obj = self.policy_model.delete_obj(obj, check_methods=check_methods)
 
             # 返回成功删除
             return self.standard_response('succeed to delete %s' % deleted_obj.name)

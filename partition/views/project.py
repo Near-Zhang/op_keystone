@@ -8,12 +8,11 @@ class ProjectsView(BaseView):
     """
     项目的增、删、改、查
     """
-
     project_model = DAO('partition.models.Project')
 
     def get(self, request):
         try:
-            # 域权限级别的请求设置 domain 字段过滤参数
+            # 域权限级别的请求，设置 domain 字段过滤参数
             if request.privilege_level == 3:
                 domain_opts_dict = {'domain': request.user.domain}
             else:
@@ -61,9 +60,9 @@ class ProjectsView(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
-            # 跨域权限级别的请求，禁止操作主 domain
+            # 跨域权限级别的请求，禁止创建涉及主 domain 的对象
             if request.privilege_level == 2:
-                if necessary_opts_dict['domain'] == request.user.domain:
+                if extra_opts_dict.get('domain') is None or extra_opts_dict.get('domain') == request.user.domain:
                     raise PermissionDenied()
 
             # 参数合成，预设 domain、create_by 的值
@@ -91,27 +90,27 @@ class ProjectsView(BaseView):
             extra_opts = [
                 'name', 'enable', 'comment']
 
-            # 非域权限级别的请求，进行参数提取列表补充，否则设置 domain 字段过滤参数
+            # 非域权限级别的请求，进行参数提取列表补充
             if request.privilege_level < 3:
-                domain_opts_dict = {}
                 extra_opts.extend([
                     'domain'
                 ])
-            else:
-                domain_opts_dict = {'domain': request.user.domain}
 
-            # 参数提取
+            # 参数提取并获取对象
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+            obj = self.project_model.get_obj(**necessary_opts_dict)
 
-            # 跨域权限级别的请求，禁止操作主 domain
+            # 域权限级别的请求，禁止修改前后涉及其他 domain 的对象
+            if request.privilege_level == 3 and obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改前后涉及主 domain 的对象
             if request.privilege_level == 2:
-                if necessary_opts_dict['domain'] == request.user.domain:
+                if extra_opts_dict.get('domain') is None or extra_opts_dict.get('domain') == request.user.domain \
+                        or obj.domain == request.user.domain:
                     raise PermissionDenied()
-
-            # 对象获取
-            obj = self.project_model.get_obj(**necessary_opts_dict, **domain_opts_dict)
 
             # 对象更新
             check_methods = ('pre_save',)
@@ -126,24 +125,22 @@ class ProjectsView(BaseView):
 
     def delete(self, request):
         try:
-            # 域权限级别的请求，设置 domain 字段过滤参数
-            if request.privilege_level < 3:
-                domain_opts_dict = {}
-            else:
-                domain_opts_dict = {'domain': request.user.domain}
-
-            # 参数获取
+            # 参数提取并获取对象
             necessary_opts = ['uuid']
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+            obj = self.project_model.get_obj(**necessary_opts_dict)
 
-            # 跨域权限级别的请求，禁止操作主 domain
-            if request.privilege_level == 2:
-                if necessary_opts_dict['domain'] == request.user.domain:
-                    raise PermissionDenied()
+            # 域权限级别的请求，禁止删除涉及其他 domain 的对象
+            if request.privilege_level == 3 and obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止删除涉及主 domain 的对象
+            if request.privilege_level == 2 and obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 对象删除
-            deleted_obj = self.project_model.delete_obj(**necessary_opts_dict, **domain_opts_dict)
+            deleted_obj = self.project_model.delete_obj(obj)
 
             # 返回成功删除
             return self.standard_response('succeed to delete %s' % deleted_obj.name)

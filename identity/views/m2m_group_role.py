@@ -22,7 +22,11 @@ class GroupToRoleView(M2MGroupRoleView):
     def get(self, request, group_uuid):
         try:
             # 保证 group 存在
-            self.group_model.get_obj(uuid=group_uuid)
+            group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
 
             # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', group=group_uuid)
@@ -39,6 +43,14 @@ class GroupToRoleView(M2MGroupRoleView):
         try:
             # 保证 group 存在
             group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and group_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']
@@ -73,6 +85,14 @@ class GroupToRoleView(M2MGroupRoleView):
         try:
             # 保证 group 存在
             group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and group_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']
@@ -110,7 +130,15 @@ class GroupToRoleView(M2MGroupRoleView):
     def delete(self, request, group_uuid):
         try:
             # 保证 group 存在
-            self.group_model.get_obj(uuid=group_uuid)
+            group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and group_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']

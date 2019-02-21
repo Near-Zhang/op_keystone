@@ -92,15 +92,12 @@ class DomainsView(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
-            # 跨域权限级别的请求，禁止操作主 domain
-            if request.privilege_level == 2:
-                if necessary_opts_dict['uuid'] == request.user.domain:
-                    raise PermissionDenied()
+            # 跨域权限级别的请求，禁止修改主 domain
+            if request.privilege_level == 2 and necessary_opts_dict['uuid'] == request.user.domain:
+                raise PermissionDenied()
 
-            # 对象获取
+            # 对象获取并更新
             obj = self.domain_model.get_obj(**necessary_opts_dict)
-
-            # 对象更新
             check_methods = ('pre_save',)
             extra_opts_dict['updated_by'] = request.user.uuid
             updated_obj = self.domain_model.update_obj(obj, check_methods=check_methods, **extra_opts_dict)
@@ -117,21 +114,19 @@ class DomainsView(BaseView):
             if request.privilege_level == 3:
                 raise PermissionDenied()
 
-            # 定义参数提取列表
+            # 参数提取
             necessary_opts = ['uuid']
-
-            # 参数获取
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
             # 跨域权限级别的请求，禁止操作主 domain
-            if request.privilege_level == 2:
-                if necessary_opts_dict['uuid'] == request.user.domain:
-                    raise PermissionDenied()
+            if request.privilege_level == 2 and necessary_opts_dict['uuid'] == request.user.domain:
+                raise PermissionDenied()
 
-            # 对象删除
+            # 对象获取并删除
+            obj = self.domain_model.get_obj(**necessary_opts_dict)
             check_methods = ('pre_delete',)
-            deleted_obj = self.domain_model.delete_obj(check_methods=check_methods, **necessary_opts_dict)
+            deleted_obj = self.domain_model.delete_obj(obj, check_methods=check_methods)
 
             # 返回成功删除
             return self.standard_response('succeed to delete domain %s' % deleted_obj.name)

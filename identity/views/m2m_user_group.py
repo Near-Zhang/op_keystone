@@ -1,4 +1,4 @@
-from op_keystone.exceptions import CustomException
+from op_keystone.exceptions import *
 from op_keystone.base_view import BaseView
 from utils.dao import DAO
 from utils import tools
@@ -22,7 +22,11 @@ class UserToGroupView(M2MUserGroupView):
     def get(self, request, user_uuid):
         try:
             # 保证 user 存在
-            self.user_model.get_obj(uuid=user_uuid)
+            user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
 
             # 获取最新 group 列表
             group_uuid_list = self.m2m_model.get_field_list('group', user=user_uuid)
@@ -39,6 +43,14 @@ class UserToGroupView(M2MUserGroupView):
         try:
             # 保证 user 存在
             user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and user_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             group_opts = ['uuid_list']
@@ -70,6 +82,14 @@ class UserToGroupView(M2MUserGroupView):
         try:
             # 保证 user 存在
             user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and user_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             group_opts = ['uuid_list']
@@ -104,7 +124,15 @@ class UserToGroupView(M2MUserGroupView):
     def delete(self, request, user_uuid):
         try:
             # 保证 user 存在
-            self.user_model.get_obj(uuid=user_uuid)
+            user_obj = self.user_model.get_obj(uuid=user_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and user_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             group_opts = ['uuid_list']
@@ -137,7 +165,11 @@ class GroupToUserView(M2MUserGroupView):
     def get(self, request, group_uuid):
         try:
             # 保证 group 存在
-            self.group_model.get_obj(uuid=group_uuid)
+            group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
 
             # 获取最新 user 列表
             user_uuid_list = self.m2m_model.get_field_list('user', group=group_uuid)
@@ -154,6 +186,14 @@ class GroupToUserView(M2MUserGroupView):
         try:
             # 保证 group 存在
             group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and group_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             user_opts = ['uuid_list']
@@ -185,6 +225,14 @@ class GroupToUserView(M2MUserGroupView):
         try:
             # 保证 group 存在
             group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and group_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             user_opts = ['uuid_list']
@@ -219,7 +267,15 @@ class GroupToUserView(M2MUserGroupView):
     def delete(self, request, group_uuid):
         try:
             # 保证 group 存在
-            self.group_model.get_obj(uuid=group_uuid)
+            group_obj = self.group_model.get_obj(uuid=group_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and group_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             user_opts = ['uuid_list']

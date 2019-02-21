@@ -10,6 +10,7 @@ class Role(models.Model):
         verbose_name = '角色'
         unique_together = ['name', 'domain']
         db_table = 'role'
+        ordering = ('-builtin',)
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')
@@ -79,7 +80,9 @@ class Policy(models.Model):
 
     class Meta:
         verbose_name = '策略'
+        unique_together = ['name', 'domain']
         db_table = 'policy'
+        ordering = ('-builtin',)
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')

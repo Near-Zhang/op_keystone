@@ -22,7 +22,11 @@ class RoleToPolicyView(M2MRolePolicyView):
     def get(self, request, role_uuid):
         try:
             # 保证 role 存在
-            self.role_model.get_obj(uuid=role_uuid)
+            role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
 
             # 获取最新 policy 列表
             policy_uuid_list = self.m2m_model.get_field_list('policy', role=role_uuid)
@@ -39,6 +43,14 @@ class RoleToPolicyView(M2MRolePolicyView):
         try:
             # 保证 role 存在
             role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and role_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             policy_opts = ['uuid_list']
@@ -73,6 +85,14 @@ class RoleToPolicyView(M2MRolePolicyView):
         try:
             # 保证 role 存在
             role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and role_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             policy_opts = ['uuid_list']
@@ -110,7 +130,15 @@ class RoleToPolicyView(M2MRolePolicyView):
     def delete(self, request, role_uuid):
         try:
             # 保证 role 存在
-            self.role_model.get_obj(uuid=role_uuid)
+            role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and role_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             policy_opts = ['uuid_list']
@@ -141,7 +169,11 @@ class PolicyToRoleView(M2MRolePolicyView):
     def get(self, request, policy_uuid):
         try:
             # 保证 policy 存在
-            self.policy_model.get_obj(uuid=policy_uuid)
+            policy_obj = self.policy_model.get_obj(uuid=policy_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and policy_obj.domain != request.user.domain:
+                raise PermissionDenied()
 
             # 获取最新 role 列表
             role_uuid_list = self.m2m_model.get_field_list('role', policy=policy_uuid)
@@ -158,6 +190,14 @@ class PolicyToRoleView(M2MRolePolicyView):
         try:
             # 保证 policy 存在
             policy_obj = self.policy_model.get_obj(uuid=policy_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and policy_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and policy_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']
@@ -192,6 +232,14 @@ class PolicyToRoleView(M2MRolePolicyView):
         try:
             # 保证 policy 存在
             policy_obj = self.policy_model.get_obj(uuid=policy_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and policy_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and policy_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']
@@ -229,7 +277,15 @@ class PolicyToRoleView(M2MRolePolicyView):
     def delete(self, request, policy_uuid):
         try:
             # 保证 policy 存在
-            self.policy_model.get_obj(uuid=policy_uuid)
+            policy_obj = self.policy_model.get_obj(uuid=policy_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and policy_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and policy_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             role_opts = ['uuid_list']

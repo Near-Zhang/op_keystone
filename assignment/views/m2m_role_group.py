@@ -1,4 +1,4 @@
-from op_keystone.exceptions import CustomException
+from op_keystone.exceptions import *
 from identity.views import M2MGroupRoleView
 from utils import tools
 
@@ -11,11 +11,15 @@ class RoleToGroupView(M2MGroupRoleView):
     def get(self, request, role_uuid):
         try:
             # 保证 role 存在
-            group_obj = self.role_model.get_obj(uuid=role_uuid)
+            role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
 
             # 获取最新 group 列表，如果登录用户非云管理员，且 role 是内置，筛选出当前登录用户相同 domain 的 group
             group_uuid_list = self.m2m_model.get_field_list('group', role=role_uuid)
-            if not request.cloud_admin and group_obj.builtin:
+            if not request.cloud_admin and role_obj.builtin:
                 group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list, domain=request.user.domain)
             else:
                 group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
@@ -31,6 +35,14 @@ class RoleToGroupView(M2MGroupRoleView):
         try:
             # 保证 role 存在
             role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and role_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             group_opts = ['uuid_list']
@@ -65,6 +77,14 @@ class RoleToGroupView(M2MGroupRoleView):
         try:
             # 保证 role 存在
             role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and role_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             group_opts = ['uuid_list']
@@ -102,7 +122,15 @@ class RoleToGroupView(M2MGroupRoleView):
     def delete(self, request, role_uuid):
         try:
             # 保证 role 存在
-            self.role_model.get_obj(uuid=role_uuid)
+            role_obj = self.role_model.get_obj(uuid=role_uuid)
+
+            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
+            if request.privilege_level == 3 and role_obj.domain != request.user.domain:
+                raise PermissionDenied()
+
+            # 跨域权限级别的请求，禁止修改涉及主 domain 的对象
+            if request.privilege_level == 2 and role_obj.domain == request.user.domain:
+                raise PermissionDenied()
 
             # 提取参数
             group_opts = ['uuid_list']
