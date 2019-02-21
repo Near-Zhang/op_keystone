@@ -39,8 +39,8 @@ class EndpointView(BaseView):
 
     def post(self, request):
         try:
-            # 非云管理员直接进行权限拒绝
-            if not request.cloud_admin:
+            # 非全局权限级别的请求，直接进行权限拒绝
+            if request.privilege_level != 1:
                 raise PermissionDenied()
 
             # 定义参数提取列表
@@ -70,8 +70,8 @@ class EndpointView(BaseView):
 
     def put(self, request):
         try:
-            # 非云管理员直接进行权限拒绝
-            if not request.cloud_admin:
+            # 非全局权限级别的请求，直接进行权限拒绝
+            if request.privilege_level != 1:
                 raise PermissionDenied()
 
             # 定义参数提取列表
@@ -101,8 +101,8 @@ class EndpointView(BaseView):
 
     def delete(self, request):
         try:
-            # 非云管理员直接进行权限拒绝
-            if not request.cloud_admin:
+            # 非全局权限级别的请求，直接进行权限拒绝
+            if request.privilege_level != 1:
                 raise PermissionDenied()
 
             # 定义参数提取列表

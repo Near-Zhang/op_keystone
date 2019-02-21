@@ -65,11 +65,6 @@ class AuthMiddleware(MiddlewareMixin):
                     privilege_level = 3
                 request.privilege_level = privilege_level
 
-                if user.is_main and domain.is_main:
-                    request.cloud_admin = True
-                else:
-                    request.cloud_admin = False
-
                 return
 
             except CustomException:
