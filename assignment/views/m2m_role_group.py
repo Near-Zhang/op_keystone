@@ -17,9 +17,9 @@ class RoleToGroupView(M2MGroupRoleView):
             if request.privilege_level == 3 and role_obj.domain != request.user.domain:
                 raise PermissionDenied()
 
-            # 获取最新 group 列表，如果登录用户非云管理员，且 role 是内置，筛选出当前登录用户相同 domain 的 group
+            # 获取最新 group 列表，非跨域权限级别的请求，且 role 是内置，筛选出当前登录用户相同 domain 的 group
             group_uuid_list = self.m2m_model.get_field_list('group', role=role_uuid)
-            if not request.cloud_admin and role_obj.builtin:
+            if request.privilege_level == 3 and role_obj.builtin:
                 group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list, domain=request.user.domain)
             else:
                 group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)

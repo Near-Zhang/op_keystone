@@ -88,10 +88,11 @@ class Policy(models.Model):
     name = models.CharField(max_length=64, verbose_name='名字')
     domain = models.CharField(max_length=32, verbose_name='归属域UUID')
     service = models.CharField(max_length=32, verbose_name='服务UUID')
-    view = models.CharField(max_length=512, verbose_name='视图类')
+    url = models.CharField(max_length=512, verbose_name='请求路由')
     method = models.CharField(max_length=16, verbose_name='请求方法')
-    request_params = models.CharField(max_length=4096, verbose_name='请求参数列表')
-    view_params = models.CharField(max_length=4096, verbose_name='视图参数列表')
+    res = models.TextField(null=True, verbose_name='资源列表')
+    res_location = models.IntegerField(verbose_name='资源位置，0：视图参数，1：请求参数, 2：不存在')
+    res_key = models.CharField(max_length=64, null=True, verbose_name='资源键名')
     effect = models.CharField(max_length=16, verbose_name='效力')
 
     # 附加字段
@@ -127,9 +128,6 @@ class Policy(models.Model):
         d = self.__dict__.copy()
         del d['_state']
 
-        for i in ['request_params', 'view_params']:
-            d[i] = tools.json_loader(d[i])
-
         for i in ['created_time', 'updated_time']:
             d[i] = tools.datetime_to_humanized(d[i])
         return d
@@ -145,6 +143,8 @@ class Policy(models.Model):
             self.domain = domain_model.get_obj(is_main=True).uuid
         else:
             domain_model.get_obj(uuid=self.domain)
+        if self.res_location != 2 and (not self.res_key or not self.res):
+            raise DatabaseError('field res_key or res is null', self.__class__.__name__)
 
     def pre_delete(self):
         """

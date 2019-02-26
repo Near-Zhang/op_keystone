@@ -4,6 +4,7 @@ from op_keystone.base_view import BaseView
 from utils import tools
 from utils.dao import DAO
 from django.conf import settings
+import re
 
 
 class AuthMiddleware(MiddlewareMixin):
@@ -54,7 +55,7 @@ class AuthMiddleware(MiddlewareMixin):
                 request.user = user
 
                 # 根据 user 和 domain 判定用户的权限级别，并设置标志到请求
-                # 权限级别的对权限的限制大于策略， 权限级别对应：
+                # 权限级别的对权限的拒绝限制大于策略， 权限级别对应：
                 # 1 -> 全局权限级别    2 -> 跨域权限级别   3 -> 域权限级别
                 if domain.is_main:
                     if user.is_main:
@@ -85,17 +86,18 @@ class AuthMiddleware(MiddlewareMixin):
 
         # 开始鉴权
         try:
-            # 整合服务和请求动作的信息
+            # 整合服务和请求信息
             service = self.service_model.get_obj(name='keystone').uuid
-            view = callback.view_class.__module__ + '.' + callback.view_class.__name__
-            method = request.method.lower()
-            view_params_dict = callback_kwargs
-            request_params_dict = BaseView().get_params_dict(request, nullable=True)
-            action_info = (view, method, view_params_dict, request_params_dict)
+            request_info = {
+                'url': request.path,
+                'method': request.method.lower(),
+                'view_params_dict': callback_kwargs,
+                'request_params_dict': BaseView().get_params_dict(request, nullable=True)
+            }
 
             # 白名单策略处理
             for white_policy_dict in settings.POLICY_WHITE_LIST:
-                if self.judge_policy(action_info, white_policy_dict):
+                if self.judge_policy(white_policy_dict, request_info):
                     return
 
             # 创建存放 role 和 policy 的集合
@@ -120,7 +122,7 @@ class AuthMiddleware(MiddlewareMixin):
                 if not self.role_model.get_obj(uuid=role_uuid).enable:
                     continue
                 policy_uuid_list = self.m2m_role_policy_model.get_field_list('policy', role=role_uuid)
-                policy_uuid_set = role_uuid_set | set(policy_uuid_list)
+                policy_uuid_set = policy_uuid_set | set(policy_uuid_list)
 
             # 获取关于当前 service 的所有 policy 列表
             policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_set, enable=True, service=service)
@@ -128,7 +130,7 @@ class AuthMiddleware(MiddlewareMixin):
             # 对策略进行逐条判断，默认策略是拒绝访问
             access = False
             for policy_dict in policy_dict_list:
-                effect = self.judge_policy(action_info, policy_dict)
+                effect = self.judge_policy(policy_dict, request_info)
                 if effect == 'allow':
                     access = True
                 elif effect == 'deny':
@@ -146,43 +148,35 @@ class AuthMiddleware(MiddlewareMixin):
             return BaseView().exception_to_response(e)
 
     @staticmethod
-    def judge_policy(action_info, policy):
+    def judge_policy(policy, request_info):
         """
         判断请求是否匹配策略，若匹配返回策略的效力
-        :param action_info: tuple, 请求动作信息
         :param policy: dict, 策略对象序列化的字典
+        :param request_info: tuple, 请求动作信息
         :return: None|str
         """
-        if policy.get('view') != '*' and policy.get('view') != action_info[0]:
+        # 请求 url 不匹配期望url，则返回 None
+        url = request_info['url']
+        exp_url = policy['url']
+        if exp_url != '*' and url != exp_url:
             return
 
-        if policy.get('method') != '*' and policy.get('method') != action_info[1]:
+        # 请求方法不匹配期望策略，则返回 None
+        method = request_info['method']
+        exp_method = policy['method']
+        if exp_method != '*' and not re.match(exp_method, method):
             return
 
-        view_params = policy.get('view_params')
-        view_params_match = False
-        for p in view_params:
-            match = True
-            for k in action_info[2]:
-                if p.get(k) and p.get(k) != action_info[2].get(k):
-                    match = False
-            if match:
-                view_params_match = True
-                break
-        if not view_params_match:
-            return
+        # 请求资源不匹配期望资源，则返回 None
+        res_location = policy.get('res_location')
+        if res_location < 2:
+            exp_res_list = policy.res.split(',')
+            if res_location == 0:
+                res = request_info['view_params_dict'].get(policy.res_key)
+            else:
+                res = request_info['request_params_dict'].get(policy.res_key)
+            if exp_res_list[0] != '*' and res not in exp_res_list:
+                return
 
-        request_params = policy.get('request_params')
-        request_params_match = False
-        for p in request_params:
-            match = True
-            for k in action_info[3]:
-                if p.get(k) and p.get(k) != action_info[3].get(k):
-                    match = False
-            if match:
-                request_params_match = True
-                break
-        if not request_params_match:
-            return
-
+        # 返回策略的效力
         return policy.get('effect')

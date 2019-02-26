@@ -37,7 +37,7 @@ class PoliciesView(BaseView):
             page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
 
             # 当前页数据获取，合并自定义角色和内置角色
-            if request.cloud_admin:
+            if request.privilege_level < 3:
                 total_list = self.policy_model.get_dict_list()
             else:
                 total_list = []
@@ -55,11 +55,13 @@ class PoliciesView(BaseView):
         try:
             # 定义参数提取列表
             necessary_opts = [
-                'name', 'service','view',
-                'effect', 'method','request_params',
-                'view_params'
+                'name', 'service', 'url',
+                'effect', 'method', 'res_location'
             ]
-            extra_opts = ['comment', 'enable']
+            extra_opts = [
+                'comment', 'enable', 'res',
+                'res_key'
+            ]
 
             # 非域权限级别的请求，进行参数提取列表补充
             if request.privilege_level < 3:
@@ -67,7 +69,7 @@ class PoliciesView(BaseView):
                     'domain', 'builtin'
                 ])
 
-            # 参数提取
+            # 参数提取，若资源位置不存在，则去除其他资源相关参数提取
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
@@ -84,8 +86,6 @@ class PoliciesView(BaseView):
             }
             obj_field.update(necessary_opts_dict)
             obj_field.update(extra_opts_dict)
-            obj_field['request_params'] = tools.json_dumper(obj_field['request_params'])
-            obj_field['view_params'] = tools.json_dumper(obj_field['view_params'])
 
             # 对象创建
             check_methods = ('pre_save',)
@@ -102,9 +102,10 @@ class PoliciesView(BaseView):
             # 定义参数提取列表
             necessary_opts = ['uuid']
             extra_opts = [
-                'name', 'service', 'view',
-                'effect', 'method','request_params',
-                'view_params', 'enable', 'comment'
+                'name', 'service', 'url',
+                'effect', 'method','res',
+                'res_location', 'res_key', 'enable',
+                'comment'
             ]
 
             # 非域权限级别的请求，进行参数提取列表补充
@@ -131,10 +132,6 @@ class PoliciesView(BaseView):
 
             # 对象更新，转化字段值为 json 字符串
             extra_opts_dict['updated_by'] = request.user.uuid
-            if extra_opts_dict.get('request_params'):
-                extra_opts_dict['request_params'] = tools.json_dumper(extra_opts_dict['request_params'])
-            if extra_opts_dict.get('view_params'):
-                extra_opts_dict['view_params'] = tools.json_dumper(extra_opts_dict['view_params'])
             check_methods = ('pre_save',)
             updated_obj = self.policy_model.update_obj(obj, check_methods=check_methods, **extra_opts_dict)
 

@@ -37,7 +37,7 @@ class RolesView(BaseView):
             page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
 
             # 当前页数据获取，合并自定义角色和内置角色
-            if request.cloud_admin:
+            if request.privilege_level < 3:
                 total_list = self.role_model.get_dict_list()
             else:
                 total_list = []

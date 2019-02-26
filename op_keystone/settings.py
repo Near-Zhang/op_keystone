@@ -124,11 +124,4 @@ ROUTE_WHITE_LIST = [
 
 # auth policy white list
 POLICY_WHITE_LIST = [
-    {
-        'view': 'identity.views.operation.LogoutView',
-        'method': 'post',
-        'view_params': [{}],
-        'request_params': [{}],
-        'effect': 'allow'
-    }
 ]
