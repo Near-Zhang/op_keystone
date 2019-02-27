@@ -2,6 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
 from django.db.utils import Error
 from op_keystone.exceptions import *
 from utils import tools
+from django.db.models import Q
 
 
 class DAO:
@@ -24,6 +25,34 @@ class DAO:
 
         self.model = model
 
+    @staticmethod
+    def parsing_query_str(query_str):
+        """
+        解析查询字符串为查询对象
+        :param query_str: str, 查询字符串
+        :return: Q object
+        """
+        q = Q()
+        if not query_str:
+            return q
+        query_list = query_str.split(',')
+        for sub_query in query_list:
+            key = 'name__startswith'
+            sub_query_list = sub_query.split(':')
+            if len(sub_query_list) > 1:
+                key, value_str = sub_query_list
+                key += '__startswith'
+            else:
+                value_str = sub_query_list[0]
+
+            value_list = value_str.split('|')
+            sub_q = Q()
+            for value in value_list:
+                sub_q = sub_q | Q(**{key: value})
+
+            q = q & sub_q
+        return q
+
     def get_obj(self, **kwargs):
         """
         从模型中过滤并获取单个对象
@@ -35,21 +64,23 @@ class DAO:
         except ObjectDoesNotExist as e:
             raise ObjectNotExist(self.model.__name__) from e
 
-    def get_obj_qs(self, **kwargs):
+    def get_obj_qs(self, query_obj=Q(), **kwargs):
         """
         从模型中过滤并获取包含对象的查询集
+        :param query_obj: Q object, 查询对象
         :param kwargs: dict, 过滤参数
         :return: query set
         """
-        return self.model.objects.filter(**self.not_soft_deleted, **kwargs)
+        return self.model.objects.filter(query_obj, **self.not_soft_deleted, **kwargs)
 
-    def get_dict_list(self, **kwargs):
+    def get_dict_list(self, query_obj=Q(), **kwargs):
         """
         从模型中过滤并获取包含对象序列化字典的列表，用于返回响应
+        :param query_obj: Q object, 查询对象
         :param kwargs: dict, 过滤参数
         :return: list, [dict, ...]
         """
-        obj_qs = self.get_obj_qs(**kwargs)
+        obj_qs = self.get_obj_qs(query_obj, **kwargs)
         dict_list = []
         for obj in obj_qs:
             dict_list.append(obj.serialize())

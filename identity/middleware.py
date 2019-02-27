@@ -158,13 +158,13 @@ class AuthMiddleware(MiddlewareMixin):
         # 请求 url 不匹配期望url，则返回 None
         url = request_info['url']
         exp_url = policy['url']
-        if exp_url != '*' and url != exp_url:
+        if exp_url != '*' and not re.match(exp_url, url):
             return
 
         # 请求方法不匹配期望策略，则返回 None
         method = request_info['method']
         exp_method = policy['method']
-        if exp_method != '*' and not re.match(exp_method, method):
+        if exp_method != '*' and method != exp_method:
             return
 
         # 请求资源不匹配期望资源，则返回 None

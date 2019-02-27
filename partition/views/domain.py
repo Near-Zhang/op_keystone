@@ -28,13 +28,18 @@ class DomainsView(BaseView):
                 obj = self.domain_model.get_obj(**uuid_opts_dict)
                 return self.standard_response(obj.serialize())
 
-            # 页码参数提取
-            page_opts = ['page', 'page-size']
-            page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
+            # 定义参数提取列表
+            extra_opts = ['query', 'page', 'page-size']
+            request_params = self.get_params_dict(request, nullable=True)
+            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 查询对象生成
+            query_str = extra_opts_dict.pop('query', None)
+            query_obj = DAO.parsing_query_str(query_str)
 
             # 当前页数据获取
-            total_list = self.domain_model.get_dict_list()
-            page_list = tools.paging_list(total_list, **page_opts_dict)
+            total_list = self.domain_model.get_dict_list(query_obj)
+            page_list = tools.paging_list(total_list, **extra_opts_dict)
 
             # 返回数据
             return self.standard_response(page_list)

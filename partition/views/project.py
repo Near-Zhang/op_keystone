@@ -28,18 +28,18 @@ class ProjectsView(BaseView):
                 obj = self.project_model.get_obj(**uuid_opts_dict, **domain_opts_dict)
                 return self.standard_response(obj.serialize())
 
-            # 定义查询参数提取列表和页码参数提取列表
-            query_opts = ['q-field', 'q-value']
-            page_opts = ['page', 'page-size']
-
-            # 提取参数
+            # 定义参数提取列表
+            extra_opts = ['query', 'page', 'page-size']
             request_params = self.get_params_dict(request, nullable=True)
-            query_opts_dict =  self.extract_opts(request_params, query_opts, necessary=False)
-            page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
+            extra_opts_dict =  self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 查询对象生成
+            query_str = extra_opts_dict.pop('query', None)
+            query_obj = DAO.parsing_query_str(query_str)
 
             # 当前页数据获取
-            total_list = self.project_model.get_dict_list(**domain_opts_dict)
-            page_list = tools.paging_list(total_list, **page_opts_dict)
+            total_list = self.project_model.get_dict_list(query_obj, **domain_opts_dict)
+            page_list = tools.paging_list(total_list, **extra_opts_dict)
 
             # 返回数据
             return self.standard_response(page_list)

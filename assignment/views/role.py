@@ -32,18 +32,23 @@ class RolesView(BaseView):
                     obj = self.role_model.get_obj(**uuid_opts_dict, builtin=True)
                 return self.standard_response(obj.serialize())
 
-            # 获取多个对象，提取页码参数
-            page_opts = ['page', 'page-size']
-            page_opts_dict = self.extract_opts(request_params, page_opts, necessary=False)
+            # 定义参数提取列表
+            extra_opts = ['query', 'page', 'page-size']
+            request_params = self.get_params_dict(request, nullable=True)
+            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 查询对象生成
+            query_str = extra_opts_dict.pop('query', None)
+            query_obj = DAO.parsing_query_str(query_str)
 
             # 当前页数据获取，合并自定义角色和内置角色
             if request.privilege_level < 3:
                 total_list = self.role_model.get_dict_list()
             else:
                 total_list = []
-                total_list.extend(self.role_model.get_dict_list(builtin=True))
-                total_list.extend(self.role_model.get_dict_list(**domain_opts_dict))
-            page_list = tools.paging_list(total_list, **page_opts_dict)
+                total_list.extend(self.role_model.get_dict_list(query_obj, builtin=True))
+                total_list.extend(self.role_model.get_dict_list(query_obj, **domain_opts_dict))
+            page_list = tools.paging_list(total_list, **extra_opts_dict)
 
             # 返回数据
             return self.standard_response(page_list)
