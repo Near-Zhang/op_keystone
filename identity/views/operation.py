@@ -3,6 +3,8 @@ from op_keystone.base_view import BaseView
 from utils import tools
 from utils.dao import DAO
 from django.conf import settings
+from django.http.response import HttpResponse
+from io import BytesIO
 
 
 class LoginView(BaseView):
@@ -235,3 +237,21 @@ class PasswordView(BaseView):
 
         except CustomException as e:
             return self.exception_to_response(e)
+
+
+class Captcha(BaseView):
+    """
+    获取生成的验证码
+    """
+
+    def get(self, request):
+        captcha_img, captcha_str = tools.generate_captcha_img()
+        bytes_mem = BytesIO()
+        captcha_img.save(bytes_mem, 'png')
+        print(captcha_str)
+
+        return HttpResponse(bytes_mem.getvalue(), content_type='image/png')
+
+
+
+

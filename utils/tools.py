@@ -7,6 +7,10 @@ import json
 import uuid
 import time
 import geoip2.database
+import string
+import re
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+import random
 
 
 def get_datetime_with_tz(datetime_obj=None, **kwargs):
@@ -176,7 +180,7 @@ def ip_to_location(ip):
     :param ip: str, IP 地址
     :return: str
     """
-    reader = geoip2.database.Reader('utils/geoip/GeoLite2-City.mmdb')
+    reader = geoip2.database.Reader('utils/extra_files/GeoLite2-City.mmdb')
     response = reader.city(ip)
 
     location_list = []
@@ -193,4 +197,86 @@ def ip_to_location(ip):
             continue
 
     return ' '.join(location_list)
+
+
+def generate_captcha_img(size=(120, 40), length=4, draw_lines=True,
+                         lines_range=(2, 3), draw_points=True, point_chance=3):
+    """
+    :param size: tuple(width, height), 图片尺寸
+    :param length: 验证码字符个数
+    :param draw_lines: 是否划干扰线
+    :param lines_range: 干扰线的条数范围，格式元组，默认为(1, 2)
+    :param draw_points: 是否画干扰点
+    :param point_chance: 干扰点出现的概率，大小范围[0, 100]
+    :return: [0]: PIL Image object
+    :return: [1]: 验证码图片中的字符串
+    """
+    # 设置验证码颜色和字体
+    mode = "RGB"
+    bg_color = (255, 255, 255)
+    fg_color_list = [
+        (0, 0, 255),
+        (255, 0, 0),
+        (255, 0, 255),
+        (0, 100, 0),
+        (238, 118, 0)
+    ]
+    font_size = 22
+    font_type_file = "utils/extra_files/Monaco.ttf"
+
+    # 随机字符集，除去可能干扰的字母(i、I、l、L、o、O、z、Z)和数字(0、1、2)
+    letter_lowercase = re.sub('[iloz]', '', string.ascii_lowercase)
+    letter_uppercase = letter_lowercase.upper()
+    digits_number = string.digits[3:]
+    chars = ''.join((letter_lowercase, letter_uppercase, digits_number))
+
+    # 创建图形和画笔
+    img = Image.new(mode, size, bg_color)
+    draw = ImageDraw.Draw(img)
+
+    # 获取随机字符串
+    random_char_list = random.sample(chars, length)
+    captcha_str = ''.join(random_char_list)
+
+    # 绘制字符
+    font = ImageFont.truetype(font_type_file, font_size)
+    width, height = size
+    for c in random_char_list:
+        font_width, font_height = font.getsize(c)
+        fg_color = fg_color_list[random.randint(0, len(fg_color_list) - 1)]
+        begin_width = (width / length - font_width) / 2 + random_char_list.index(c) * width / (length + 1)
+        begin_height = (height - font_height) / 3
+        draw.text((begin_width, begin_height), c, font=font, fill=fg_color)
+
+    # 绘制干扰线
+    if draw_lines:
+        line_num = random.randint(*lines_range)
+        for i in range(line_num):
+            begin = (random.randint(0, size[0]), random.randint(0, size[1]))
+            end = (random.randint(0, size[0]), random.randint(0, size[1]))
+            draw.line([begin, end], fill=(0, 0, 0))
+
+    # 绘制干扰点
+    if draw_points:
+        chance = min(100, int(point_chance))
+        for w in range(width):
+            for h in range(height):
+                tmp = random.randint(0, 100)
+                if tmp > 100 - chance:
+                    draw.point((w, h), fill=(0, 0, 0))
+
+    # 图形扭曲参数
+    params = [
+        1 - float(random.randint(1, 2)) / 100, 0, 0,
+        0, 1 - float(random.randint(1, 10)) / 100, float(random.randint(1, 2)) / 500,
+        0.001, float(random.randint(1, 2)) / 500
+    ]
+    img = img.transform(size, Image.PERSPECTIVE, params)
+    img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
+
+    return img, captcha_str
+
+
+
+
 
