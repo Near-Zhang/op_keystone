@@ -60,12 +60,11 @@ class PoliciesView(BaseView):
         try:
             # 定义参数提取列表
             necessary_opts = [
-                'name', 'service', 'url',
-                'effect', 'method', 'res_location'
+                'name', 'action', 'effect',
+                'res'
             ]
             extra_opts = [
-                'comment', 'enable', 'res',
-                'res_key'
+                'condition', 'comment', 'enable'
             ]
 
             # 非域权限级别的请求，进行参数提取列表补充
@@ -107,9 +106,8 @@ class PoliciesView(BaseView):
             # 定义参数提取列表
             necessary_opts = ['uuid']
             extra_opts = [
-                'name', 'service', 'url',
-                'effect', 'method','res',
-                'res_location', 'res_key', 'enable',
+                'name', 'action', 'effect',
+                'res', 'condition', 'enable',
                 'comment'
             ]
 

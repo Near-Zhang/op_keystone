@@ -275,8 +275,3 @@ def generate_captcha_img(size=(120, 40), length=4, draw_lines=True,
     img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
     return img, captcha_str
-
-
-
-
-

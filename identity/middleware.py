@@ -18,6 +18,7 @@ class AuthMiddleware(MiddlewareMixin):
     token_model = DAO('credence.models.Token')
     role_model = DAO('assignment.models.Role')
     policy_model = DAO('assignment.models.Policy')
+    action_model = DAO('assignment.models.Action')
     service_model = DAO('catalog.models.Service')
 
     m2m_user_role_model = DAO('identity.models.M2MUserRole')
@@ -76,22 +77,19 @@ class AuthMiddleware(MiddlewareMixin):
 
     def process_view(self, request, callback, callback_args, callback_kwargs):
 
-        # 无需登录的请求忽略鉴权
-        if not getattr(request, 'user', None):
-            return
-
-        # 全局权限级别的请求忽略鉴权
-        if request.privilege_level == 1:
+        # 无需登录的请求、全局权限级别的请求，忽略鉴权
+        if not getattr(request, 'user', None) or request.privilege_level == 1:
             return
 
         # 开始鉴权
         try:
             # 整合服务和请求信息
+            user_uuid = request.user.uuid
             service = self.service_model.get_obj(name='keystone').uuid
             request_info = {
                 'url': request.path,
                 'method': request.method.lower(),
-                'view_params_dict': callback_kwargs,
+                'routing_params_dict': callback_kwargs,
                 'request_params_dict': BaseView().get_params_dict(request, nullable=True)
             }
 
@@ -100,45 +98,8 @@ class AuthMiddleware(MiddlewareMixin):
                 if self.judge_policy(white_policy_dict, request_info):
                     return
 
-            # 创建存放 role 和 policy 的集合
-            role_uuid_set = set([])
-            policy_uuid_set = set([])
-
-            # 将用户对应的 role uuid 放入集合
-            user_uuid = request.user.uuid
-            u_role_uuid_list = self.m2m_user_role_model.get_field_list('role', user=user_uuid)
-            role_uuid_set = role_uuid_set | set(u_role_uuid_list)
-
-            # 将用户所在用户组对应的 role uuid 放入集合
-            group_uuid_list = self.m2m_user_group_model.get_field_list('group', user=user_uuid)
-            for group_uuid in group_uuid_list:
-                if not self.group_model.get_obj(uuid=group_uuid).enable:
-                    continue
-                g_role_uuid_list = self.m2m_group_role_model.get_field_list('role', group=group_uuid)
-                role_uuid_set = role_uuid_set | set(g_role_uuid_list)
-
-            # 获取所有 role 对应的 policy uuid 放入集合
-            for role_uuid in role_uuid_set:
-                if not self.role_model.get_obj(uuid=role_uuid).enable:
-                    continue
-                policy_uuid_list = self.m2m_role_policy_model.get_field_list('policy', role=role_uuid)
-                policy_uuid_set = policy_uuid_set | set(policy_uuid_list)
-
-            # 获取关于当前 service 的所有 policy 列表
-            policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_set, enable=True, service=service)
-
-            # 对策略进行逐条判断，默认策略是拒绝访问
-            access = False
-            for policy_dict in policy_dict_list:
-                effect = self.judge_policy(policy_dict, request_info)
-                if effect == 'allow':
-                    access = True
-                elif effect == 'deny':
-                    access = False
-                    break
-
-            if not access:
-                raise CustomException()
+            # 判断能否通过
+            self.judge_access(user_uuid, service, request_info)
 
         except RequestParamsError as e:
             return BaseView().exception_to_response(e)
@@ -147,36 +108,81 @@ class AuthMiddleware(MiddlewareMixin):
             e = PermissionDenied()
             return BaseView().exception_to_response(e)
 
-    @staticmethod
-    def judge_policy(policy, request_info):
+    def judge_access(self, user_uuid, service, request_info):
+        """
+        获取指定 uuid 的 user 的 policy
+        :param user_uuid: str, user uuid
+        :return: list
+        """
+        # 创建存放 role 和 policy 的集合
+        role_uuid_set = set([])
+        policy_uuid_set = set([])
+
+        # 将用户对应的 role uuid 放入集合
+
+        u_role_uuid_list = self.m2m_user_role_model.get_field_list('role', user=user_uuid)
+        role_uuid_set = role_uuid_set | set(u_role_uuid_list)
+
+        # 将用户所在用户组对应的 role uuid 放入集合
+        group_uuid_list = self.m2m_user_group_model.get_field_list('group', user=user_uuid)
+        for group_uuid in group_uuid_list:
+            if not self.group_model.get_obj(uuid=group_uuid).enable:
+                continue
+            g_role_uuid_list = self.m2m_group_role_model.get_field_list('role', group=group_uuid)
+            role_uuid_set = role_uuid_set | set(g_role_uuid_list)
+
+        # 获取所有 role 对应的 policy uuid 放入集合
+        for role_uuid in role_uuid_set:
+            if not self.role_model.get_obj(uuid=role_uuid).enable:
+                continue
+            policy_uuid_list = self.m2m_role_policy_model.get_field_list('policy', role=role_uuid)
+            policy_uuid_set = policy_uuid_set | set(policy_uuid_list)
+
+        # 获取 policy 列表
+        policy_dict_list = self.policy_model.get_dict_list(uuid__in=policy_uuid_set, enable=True)
+
+        # 对策略进行逐条判断，默认策略是拒绝访问
+        access = False
+        for policy_dict in policy_dict_list:
+            effect = self.judge_policy(policy_dict, service, request_info)
+            if effect == 'allow':
+                access = True
+            elif effect == 'deny':
+                access = False
+                break
+
+        if not access:
+            raise CustomException()
+
+    def judge_policy(self, policy, service, request_info):
         """
         判断请求是否匹配策略，若匹配返回策略的效力
         :param policy: dict, 策略对象序列化的字典
         :param request_info: tuple, 请求动作信息
         :return: None|str
         """
-        # 请求 url 不匹配期望url，则返回 None
+        # action 获取, action 的 service 不符合，则返回 None
+        action = self.action_model.get_obj(uuid=policy['action'])
+        if action.service != service:
+            return
+
+        # 请求 view 不匹配期望 view，则返回 None
         url = request_info['url']
-        exp_url = policy['url']
+        exp_url = action.url
         if exp_url != '*' and not re.match(exp_url, url):
             return
 
-        # 请求方法不匹配期望策略，则返回 None
+        # 请求 method 不匹配期望 method，则返回 None
         method = request_info['method']
-        exp_method = policy['method']
+        exp_method = action.method
         if exp_method != '*' and method != exp_method:
             return
 
-        # 请求资源不匹配期望资源，则返回 None
-        res_location = policy.get('res_location')
-        if res_location < 2:
-            exp_res_list = policy.res.split(',')
-            if res_location == 0:
-                res = request_info['view_params_dict'].get(policy.res_key)
-            else:
-                res = request_info['request_params_dict'].get(policy.res_key)
-            if exp_res_list[0] != '*' and res not in exp_res_list:
-                return
+        # 请求 res 不匹配期望 res，则返回 None
+        res = request_info['routing_params_dict'].get('uuid')
+        exp_res_list = policy['res'].split(',')
+        if exp_res_list[0] != '*' and res not in exp_res_list:
+            return
 
         # 返回策略的效力
         return policy.get('effect')

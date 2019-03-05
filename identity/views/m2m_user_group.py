@@ -19,9 +19,10 @@ class UserToGroupView(M2MUserGroupView):
     通过用户，对其所属的组进行增、删、改、查
     """
 
-    def get(self, request, user_uuid):
+    def get(self, request, uuid):
         try:
             # 保证 user 存在
+            user_uuid = uuid
             user_obj = self.user_model.get_obj(uuid=user_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -39,9 +40,10 @@ class UserToGroupView(M2MUserGroupView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def post(self, request, user_uuid):
+    def post(self, request, uuid):
         try:
             # 保证 user 存在
+            user_uuid = uuid
             user_obj = self.user_model.get_obj(uuid=user_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -78,9 +80,10 @@ class UserToGroupView(M2MUserGroupView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def put(self, request, user_uuid):
+    def put(self, request, uuid):
         try:
             # 保证 user 存在
+            user_uuid = uuid
             user_obj = self.user_model.get_obj(uuid=user_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -121,9 +124,10 @@ class UserToGroupView(M2MUserGroupView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def delete(self, request, user_uuid):
+    def delete(self, request, uuid):
         try:
             # 保证 user 存在
+            user_uuid = uuid
             user_obj = self.user_model.get_obj(uuid=user_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -162,9 +166,10 @@ class GroupToUserView(M2MUserGroupView):
     通过用户组，对其包含的用户进行增、删、改、查
     """
 
-    def get(self, request, group_uuid):
+    def get(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -182,9 +187,10 @@ class GroupToUserView(M2MUserGroupView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def post(self, request, group_uuid):
+    def post(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -221,9 +227,10 @@ class GroupToUserView(M2MUserGroupView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def put(self, request, group_uuid):
+    def put(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -264,9 +271,10 @@ class GroupToUserView(M2MUserGroupView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def delete(self, request, group_uuid):
+    def delete(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象

@@ -87,12 +87,9 @@ class Policy(models.Model):
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')
     domain = models.CharField(max_length=32, verbose_name='归属域UUID')
-    service = models.CharField(max_length=32, verbose_name='服务UUID')
-    url = models.CharField(max_length=512, verbose_name='请求路由')
-    method = models.CharField(max_length=16, verbose_name='请求方法')
-    res = models.TextField(null=True, verbose_name='资源列表')
-    res_location = models.IntegerField(verbose_name='资源位置，0：视图参数，1：请求参数, 2：不存在')
-    res_key = models.CharField(max_length=64, null=True, verbose_name='资源键名')
+    action = models.CharField(max_length=64, verbose_name='动作UUID')
+    res = models.TextField(verbose_name='资源列表')
+    condition = models.CharField(max_length=512, null=True, verbose_name='资源条件')
     effect = models.CharField(max_length=16, verbose_name='效力')
 
     # 附加字段
@@ -137,14 +134,12 @@ class Policy(models.Model):
         保存前，检查 domain、service 是否存在，当策略为 builtin 时固定 domain 为 main domain
         :return:
         """
-        DAO('catalog.models.Service').get_obj(uuid=self.service)
+        DAO('assignment.models.Action').get_obj(uuid=self.action)
         domain_model = DAO('partition.models.Domain')
         if self.builtin:
             self.domain = domain_model.get_obj(is_main=True).uuid
         else:
             domain_model.get_obj(uuid=self.domain)
-        if self.res_location != 2 and (not self.res_key or not self.res):
-            raise DatabaseError('field res_key or res is null', self.__class__.__name__)
 
     def pre_delete(self):
         """
@@ -153,6 +148,70 @@ class Policy(models.Model):
         """
         if M2MRolePolicy.objects.filter(policy=self.uuid).count() > 0:
             raise DatabaseError('policy are referenced by roles', self.__class__.__name__)
+
+
+class Action(models.Model):
+
+    class Meta:
+        verbose_name = '动作'
+        unique_together = ['name', 'service']
+        db_table = 'action'
+
+    # 必要字段
+    name = models.CharField(max_length=64, verbose_name='名字')
+    service = models.CharField(max_length=32, verbose_name='服务UUID')
+    url = models.CharField(max_length=512, verbose_name='url正则')
+    method = models.CharField(max_length=16, verbose_name='请求方法')
+
+    # 附加字段
+    comment = models.CharField(max_length=64, null=True, verbose_name='备注')
+
+    # 自动生成字段
+    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
+    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
+    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
+    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    def __init__(self, *args, **kwargs):
+        """
+        实例构建后生成唯一 uuid
+        :param args:
+        :param kwargs:
+        """
+        super().__init__(*args, **kwargs)
+        if not self.uuid:
+            self.uuid = tools.generate_unique_uuid()
+
+    def __str__(self):
+        return '{"uuid"："%s", "name": "%s"}' %(self.uuid, self.name)
+
+    def serialize(self):
+        """
+        对象序列化
+        :return: dict
+        """
+        d = self.__dict__.copy()
+        del d['_state']
+
+        for i in ['created_time', 'updated_time']:
+            d[i] = tools.datetime_to_humanized(d[i])
+        return d
+
+    def pre_save(self):
+        """
+        保存前，检查 service 是否存在
+        :return:
+        """
+        DAO('catalog.models.Service').get_obj(uuid=self.service)
+
+    def pre_delete(self):
+        """
+        删除前，检查对象的对外关联
+        :return:
+        """
+        if Policy.objects.filter(action=self.uuid).count() > 0:
+            raise DatabaseError('action are referenced by policies', self.__class__.__name__)
 
 
 class M2MRolePolicy(models.Model):

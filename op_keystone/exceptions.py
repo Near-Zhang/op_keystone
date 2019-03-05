@@ -93,6 +93,16 @@ class PasswordInvalid(CustomException):
         super().__init__(exception_message)
 
 
+class RoutingParamsError(CustomException):
+    """
+    路由的资源参数有错误
+    """
+    def __init__(self):
+        self.code = 400
+        exception_message = 'the res uuid of routing params is missing'
+        super().__init__(exception_message)
+
+
 class RequestParamsError(CustomException):
     """
     从请求中提取的参数有错误

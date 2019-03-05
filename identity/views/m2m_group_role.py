@@ -19,9 +19,10 @@ class GroupToRoleView(M2MGroupRoleView):
     通过用户组，对其所属的角色进行增、删、改、查
     """
 
-    def get(self, request, group_uuid):
+    def get(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -39,9 +40,10 @@ class GroupToRoleView(M2MGroupRoleView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def post(self, request, group_uuid):
+    def post(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -81,9 +83,10 @@ class GroupToRoleView(M2MGroupRoleView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def put(self, request, group_uuid):
+    def put(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象
@@ -127,9 +130,10 @@ class GroupToRoleView(M2MGroupRoleView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def delete(self, request, group_uuid):
+    def delete(self, request, uuid):
         try:
             # 保证 group 存在
+            group_uuid = uuid
             group_obj = self.group_model.get_obj(uuid=group_uuid)
 
             # 非跨域权限级别的请求，禁止查询其他 domain 的对象

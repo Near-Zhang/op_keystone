@@ -58,6 +58,10 @@ class BaseView(View):
         return self.standard_response(code=code, message=message)
 
     @staticmethod
+    def get_res_uuid():
+        pass
+
+    @staticmethod
     def get_params_dict(request, nullable=False):
         """
         从请求中获取参数字典
