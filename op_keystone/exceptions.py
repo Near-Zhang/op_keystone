@@ -95,7 +95,7 @@ class PasswordInvalid(CustomException):
 
 class RoutingParamsError(CustomException):
     """
-    路由的资源参数有错误
+    路由的资源 uuid 参数有错误
     """
     def __init__(self):
         self.code = 400

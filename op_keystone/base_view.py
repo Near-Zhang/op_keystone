@@ -5,61 +5,10 @@ from utils.tools import json_loader
 import re
 
 
-class BaseView(View):
+class ParamsProcessMixin:
     """
-    基础视图类，提供返回响应的方法，以及限制非允许方法的请求，提取参数的方法
+    参数处理混合类，提供提取参数的方法
     """
-
-    http_method_names = ['get', 'post', 'put', 'delete', 'options']
-
-    @staticmethod
-    def standard_response(data=None, code=200, message=None):
-        """
-        生成标准的 JsonResponse 对象
-        :param data: dict, 数据
-        :param code: int, 返回码
-        :param message: str, 错误信息
-        :return: JsonResponse object, json 响应对象
-        """
-        res_dict = {
-            'code': code,
-            'data': data,
-            'message': message
-        }
-        return JsonResponse(res_dict)
-
-    def dispatch(self, request, *args, **kwargs):
-        """
-        根据请求的方法，分发视图函数
-        :param request: request object, 请求
-        :param args: tuple, 位置参数
-        :param kwargs: dict, 关键字参数
-        :return: Response object, 响应对象
-        """
-        try:
-            if request.method.lower() in self.http_method_names:
-                try:
-                    handler = getattr(self, request.method.lower())
-                except AttributeError:
-                    raise MethodNotAllowed(request.method.lower(), request.path)
-                else:
-                    return handler(request, *args, **kwargs)
-        except MethodNotAllowed as e:
-            return self.exception_to_response(e)
-
-    def exception_to_response(self, exception):
-        """
-        接收异常对象，转化为 json 响应对象并返回
-        :param exception: Exception object, 异常对象
-        :return: Response object, 响应对象
-        """
-        code = exception.code
-        message = exception.__message__()
-        return self.standard_response(code=code, message=message)
-
-    @staticmethod
-    def get_res_uuid():
-        pass
 
     @staticmethod
     def get_params_dict(request, nullable=False):
@@ -67,7 +16,6 @@ class BaseView(View):
         从请求中获取参数字典
         :param request: request object, 请求
         :param nullable: bool, 是否可为空
-        :param form: bool, body 是否为表单数据
         :return: dict, 请求参数字典
         """
         # 根据方法取出数据
@@ -129,3 +77,56 @@ class BaseView(View):
             elif necessary:
                 raise RequestParamsError(opt=opt)
         return extract_dict
+
+
+class BaseView(View, ParamsProcessMixin):
+    """
+    基础视图类，提供返回响应的方法，以及限制非允许方法的请求
+    """
+
+    http_method_names = ['get', 'post', 'put', 'delete', 'options']
+
+    @staticmethod
+    def standard_response(data=None, code=200, message=None):
+        """
+        生成标准的 JsonResponse 对象
+        :param data: dict, 数据
+        :param code: int, 返回码
+        :param message: str, 错误信息
+        :return: JsonResponse object, json 响应对象
+        """
+        res_dict = {
+            'code': code,
+            'data': data,
+            'message': message
+        }
+        return JsonResponse(res_dict)
+
+    def dispatch(self, request, *args, **kwargs):
+        """
+        根据请求的方法，分发视图函数
+        :param request: request object, 请求
+        :param args: tuple, 位置参数
+        :param kwargs: dict, 关键字参数
+        :return: Response object, 响应对象
+        """
+        try:
+            if request.method.lower() in self.http_method_names:
+                try:
+                    handler = getattr(self, request.method.lower())
+                except AttributeError:
+                    raise MethodNotAllowed(request.method.lower(), request.path)
+                else:
+                    return handler(request, *args, **kwargs)
+        except MethodNotAllowed as e:
+            return self.exception_to_response(e)
+
+    def exception_to_response(self, exception):
+        """
+        接收异常对象，转化为 json 响应对象并返回
+        :param exception: Exception object, 异常对象
+        :return: Response object, 响应对象
+        """
+        code = exception.code
+        message = exception.__message__()
+        return self.standard_response(code=code, message=message)

@@ -13,7 +13,7 @@ class ActionsView(BaseView):
 
     def get(self, request, uuid=None):
         try:
-            # 若存在资源 uuid 则返回获取的单个对象
+            # 若存在 uuid 则返回获取的单个对象
             if uuid:
                 obj = self.action_model.get_obj(uuid=uuid)
                 return self.standard_response(obj.serialize())
@@ -80,7 +80,7 @@ class ActionsView(BaseView):
             if request.privilege_level != 1:
                 raise PermissionDenied()
 
-            # 资源 uuid 不存在，发生路由参数异常，否则获取资源定位对象
+            # 若 uuid 不存在，发生路由参数异常，否则获取资源定位对象
             if not uuid:
                 raise RoutingParamsError()
             obj = self.action_model.get_obj(uuid=uuid)

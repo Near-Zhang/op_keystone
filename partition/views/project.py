@@ -10,7 +10,7 @@ class ProjectsView(BaseView):
     """
     project_model = DAO('partition.models.Project')
 
-    def get(self, request):
+    def get(self, request, uuid=None):
         try:
             # 域权限级别的请求，设置 domain 字段过滤参数
             if request.privilege_level == 3:
@@ -18,14 +18,8 @@ class ProjectsView(BaseView):
             else:
                 domain_opts_dict = {}
 
-            # 获取 uuid 参数
-            uuid_opts = ['uuid']
-            request_params = self.get_params_dict(request, nullable=True)
-            uuid_opts_dict = self.extract_opts(request_params, uuid_opts, necessary=False)
-
-            # 若存在 uuid 参数则返回获取的单个对象
-            if uuid_opts_dict:
-                obj = self.project_model.get_obj(**uuid_opts_dict, **domain_opts_dict)
+            if uuid:
+                obj = self.project_model.get_obj(uuid=uuid, **domain_opts_dict)
                 return self.standard_response(obj.serialize())
 
             # 定义参数提取列表
@@ -47,7 +41,7 @@ class ProjectsView(BaseView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def post(self, request):
+    def post(self, request, uuid=None):
         try:
             # 定义参数提取列表
             necessary_opts = ['name']
@@ -87,10 +81,14 @@ class ProjectsView(BaseView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def put(self, request):
+    def put(self, request, uuid=None):
         try:
+            # 资源 uuid 不存在，发生路由参数异常，否则获取资源定位对象
+            if not uuid:
+                raise RoutingParamsError()
+            obj = self.project_model.get_obj(uuid=uuid)
+
             # 定义参数提取列表
-            necessary_opts = ['uuid']
             extra_opts = [
                 'name', 'enable', 'comment']
 
@@ -100,11 +98,9 @@ class ProjectsView(BaseView):
                     'domain'
                 ])
 
-            # 参数提取并获取对象
+            # 参数提取
             request_params = self.get_params_dict(request)
-            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
-            obj = self.project_model.get_obj(**necessary_opts_dict)
 
             # 域权限级别的请求，禁止修改前后涉及其他 domain 的对象
             if request.privilege_level == 3 and obj.domain != request.user.domain:
@@ -127,13 +123,12 @@ class ProjectsView(BaseView):
         except CustomException as e:
             return self.exception_to_response(e)
 
-    def delete(self, request):
+    def delete(self, request, uuid=None):
         try:
-            # 参数提取并获取对象
-            necessary_opts = ['uuid']
-            request_params = self.get_params_dict(request)
-            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
-            obj = self.project_model.get_obj(**necessary_opts_dict)
+            # 资源 uuid 不存在，发生路由参数异常，否则获取资源定位对象
+            if not uuid:
+                raise RoutingParamsError()
+            obj = self.project_model.get_obj(uuid=uuid)
 
             # 域权限级别的请求，禁止删除涉及其他 domain 的对象
             if request.privilege_level == 3 and obj.domain != request.user.domain:

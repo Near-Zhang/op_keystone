@@ -119,7 +119,6 @@ class AuthMiddleware(MiddlewareMixin):
         policy_uuid_set = set([])
 
         # 将用户对应的 role uuid 放入集合
-
         u_role_uuid_list = self.m2m_user_role_model.get_field_list('role', user=user_uuid)
         role_uuid_set = role_uuid_set | set(u_role_uuid_list)
 

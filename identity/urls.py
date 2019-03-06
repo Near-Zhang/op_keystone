@@ -3,8 +3,8 @@ from .views import *
 
 
 urlpatterns = [
-    path(r'users/', UsersView.as_view()),
-    path(r'groups/', GroupsView.as_view()),
+    re_path(r'^users/((?P<uuid>\w+)/)?$', UsersView.as_view()),
+    re_path(r'^groups/((?P<uuid>\w+)/)?$', GroupsView.as_view()),
     re_path(r'users/(?P<uuid>\w+)/groups/', UserToGroupView.as_view()),
     re_path(r'groups/(?P<uuid>\w+)/users/', GroupToUserView.as_view()),
     re_path(r'users/(?P<uuid>\w+)/roles/', UserToRoleView.as_view()),

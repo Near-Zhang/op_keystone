@@ -48,7 +48,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'identity.middleware.AuthMiddleware',
+    'op_keystone.middleware.AuthMiddleware',
 ]
 
 ROOT_URLCONF = 'op_keystone.urls'
