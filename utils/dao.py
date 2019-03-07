@@ -1,3 +1,4 @@
+from op_keystone.base_model import BaseModel
 from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
 from django.db.utils import Error
 from op_keystone.exceptions import *
@@ -11,19 +12,38 @@ class DAO:
     """
 
     def __init__(self, model):
+        """
+        初始化 dao 对象的属性
+        :param model:
+        """
         if isinstance(model, str):
             model = tools.import_string(model)
-
-        # 如果模型使用了软删除，则查询时添加未软删除过滤
-        try:
-            model._meta.get_field('deleted_time')
-            self.not_soft_deleted = {
-                "deleted_time__isnull": True
-            }
-        except FieldDoesNotExist:
-            self.not_soft_deleted = {}
+        if not model or not issubclass(model, BaseModel):
+            raise ValueError()
 
         self.model = model
+        self.query_obj = Q()
+        if self.model.get_field('deleted_time'):
+            self.query_obj = Q(deleted_time__isnull=True)
+
+    def combine_request(self, request):
+        """
+        融合请求的信息，更新 dao 对象的操作属性
+        :param request:
+        :return:
+        """
+        # 当用户级别为单个域时
+        if request.user_level == 3:
+            if self.model.__name__ == 'Domain':
+                # 对于 domain 模型，只允许查询用户所在 domain
+                self.query_obj &= Q(uuid=request.user.domain)
+            if self.model.get_field('domain'):
+                if self.model.get_field('builtin'):
+                    # 对于包含 domain、builtin 字段的模型，只允许查询用户所在 domain 以及内置的对象
+                    self.query_obj &= (Q(domain=request.user.domain) | Q(builtin=True))
+                else:
+                    # 对于包含 domain 字段的模型，只允许查询用户所在 domain 的对象
+                    self.query_obj &= Q(domain=request.user.domain)
 
     @staticmethod
     def parsing_query_str(query_str):
@@ -60,27 +80,27 @@ class DAO:
         :return: model object
         """
         try:
-            return self.model.objects.get(**self.not_soft_deleted, **kwargs)
+            return self.model.objects.get(self.query_obj, **kwargs)
         except ObjectDoesNotExist as e:
             raise ObjectNotExist(self.model.__name__) from e
 
-    def get_obj_qs(self, query_obj=Q(), **kwargs):
+    def get_obj_qs(self, *query_obj, **kwargs):
         """
         从模型中过滤并获取包含对象的查询集
         :param query_obj: Q object, 查询对象
         :param kwargs: dict, 过滤参数
         :return: query set
         """
-        return self.model.objects.filter(query_obj, **self.not_soft_deleted, **kwargs)
+        return self.model.objects.filter(*query_obj, self.query_obj, **kwargs)
 
-    def get_dict_list(self, query_obj=Q(), **kwargs):
+    def get_dict_list(self, *query_obj, **kwargs):
         """
         从模型中过滤并获取包含对象序列化字典的列表，用于返回响应
         :param query_obj: Q object, 查询对象
         :param kwargs: dict, 过滤参数
         :return: list, [dict, ...]
         """
-        obj_qs = self.get_obj_qs(query_obj, **kwargs)
+        obj_qs = self.get_obj_qs(*query_obj, **kwargs)
         dict_list = []
         for obj in obj_qs:
             dict_list.append(obj.serialize())
@@ -141,7 +161,7 @@ class DAO:
 
     def delete_obj(self, obj, check_methods=(), deleted_by=None):
         """
-        从模型中删除一个对象，自行区分呢是否软删除
+        从模型中删除一个对象，自行区分是否软删除
         :param obj: model object, 对象
         :param check_methods: tuple, 包含多个用于自检的方法名的元祖
         :param deleted_by: str, 删除用户 uuid，软删除需要

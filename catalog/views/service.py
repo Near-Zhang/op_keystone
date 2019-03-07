@@ -1,15 +1,17 @@
 from op_keystone.exceptions import *
-from op_keystone.base_view import BaseView
+from op_keystone.base_view import ResourceView
 from utils import tools
 from utils.dao import DAO
 
 
-class ServicesView(BaseView):
+class ServicesView(ResourceView):
     """
     服务的增、删、改、查
     """
 
-    service_model = DAO('catalog.models.Service')
+    def __init__(self):
+        model = 'catalog.models.Service'
+        super().__init__(model)
 
     def get(self, request):
         try:

@@ -1,43 +1,19 @@
-from op_keystone.exceptions import *
-from op_keystone.base_view import BaseView
+from op_keystone.exceptions import CustomException, PermissionDenied
+from op_keystone.base_view import M2MRelationView
 from utils.dao import DAO
 from utils import tools
 
 
-class M2MRolePolicyView(BaseView):
+class RoleToPolicyView(M2MRelationView):
     """
-    角色和策略的基础多对多视图类
-    """
-
-    role_model = DAO('assignment.models.Role')
-    policy_model = DAO('assignment.models.Policy')
-    m2m_model = DAO('assignment.models.M2MRolePolicy')
-
-
-class RoleToPolicyView(M2MRolePolicyView):
-    """
-    通过角色，对其关联的策略进行增、删、改、查
+    通过角色，对将其关联的策略进行增、删、改、查
     """
 
-    def get(self, request, role_uuid):
-        try:
-            # 保证 role 存在
-            role_obj = self.role_model.get_obj(uuid=role_uuid)
-
-            # 除了内置 role，非跨域权限级别的请求，禁止查询其他 domain 的 role
-            if not role_obj.builtin:
-                if request.privilege_level == 3 and role_obj.domain != request.user.domain:
-                    raise PermissionDenied()
-
-            # 获取关联的 policy 列表
-            policy_dict_list = self.get_policy_list(request, role_uuid)
-
-            # 返回关联的 policy 列表
-            data = tools.paging_list(policy_dict_list)
-            return self.standard_response(data)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        from_model = 'assignment.models.Role'
+        to_model = 'assignment.models.Policy'
+        m2m_model = 'assignment.models.M2MRolePolicy'
+        super().__init__(from_model, to_model, m2m_model)
 
     def post(self, request, role_uuid):
         try:
@@ -180,30 +156,16 @@ class RoleToPolicyView(M2MRolePolicyView):
         return policy_dict_list
 
 
-class PolicyToRoleView(M2MRolePolicyView):
+class PolicyToRoleView(M2MRelationView):
     """
     通过策略，对将其关联的角色进行增、删、改、查
     """
 
-    def get(self, request, policy_uuid):
-        try:
-            # 保证 policy 存在
-            policy_obj = self.policy_model.get_obj(uuid=policy_uuid)
-
-            # 除了内置 policy，非跨域权限级别的请求，禁止查询其他 domain 的 policy
-            if not policy_obj.builtin:
-                if request.privilege_level == 3 and policy_obj.domain != request.user.domain:
-                    raise PermissionDenied()
-
-            # 获取关联的 role 列表
-            role_dict_list = self.get_role_list(request, policy_uuid)
-
-            # 返回关联的 role 列表
-            data = tools.paging_list(role_dict_list)
-            return self.standard_response(data)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        from_model = 'assignment.models.Policy'
+        to_model = 'assignment.models.Role'
+        m2m_model = 'assignment.models.M2MRolePolicy'
+        super().__init__(from_model, to_model, m2m_model)
 
     def post(self, request, policy_uuid):
         try:

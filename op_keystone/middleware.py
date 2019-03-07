@@ -9,7 +9,7 @@ import re
 
 class AuthMiddleware(MiddlewareMixin):
     """
-    检查用户登陆状态的中间件、校验用户权限的中间件
+    检查用户登陆状态的预请求中间件、校验用户权限的预路由中间件
     """
 
     domain_model = DAO('partition.models.Domain')
@@ -28,7 +28,7 @@ class AuthMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
 
-        # 白名单路由处理
+        # 免登录白名单路由
         request_route = (request.path, request.method.lower())
         if request_route in settings.ROUTE_WHITE_LIST:
             return
@@ -48,25 +48,12 @@ class AuthMiddleware(MiddlewareMixin):
                 if now > expire_date:
                     raise CustomException()
 
-                # 设置用户信息到请求
+                # 设置用户到请求信息中
                 user = self.user_model.get_obj(uuid=access_token.user)
                 domain = self.domain_model.get_obj(uuid=user.domain)
                 if not domain.enable or not user.enable:
                     raise CustomException()
                 request.user = user
-
-                # 根据 user 和 domain 判定用户的权限级别，并设置标志到请求
-                # 权限级别的对权限的拒绝限制大于策略， 权限级别对应：
-                # 1 -> 全局权限级别    2 -> 跨域权限级别   3 -> 域权限级别
-                if domain.is_main:
-                    if user.is_main:
-                        privilege_level = 1
-                    else:
-                        privilege_level = 2
-                else:
-                    privilege_level = 3
-                request.privilege_level = privilege_level
-
                 return
 
             except CustomException:
@@ -77,9 +64,24 @@ class AuthMiddleware(MiddlewareMixin):
 
     def process_view(self, request, callback, callback_args, callback_kwargs):
 
-        # 无需登录的请求、全局权限级别的请求，忽略鉴权
-        if not getattr(request, 'user', None) or request.privilege_level == 1:
+        # 无登录状态的请求，忽略鉴权
+        if not getattr(request, 'user', None):
             return
+
+        # 根据 user 和 domain 是否为主，判定用户级别，并设置标志到请求
+        # 用户级别对权限的拒绝限制优先于策略， 级别对应：
+        # 1 -> 全域    2 -> 跨域(除了主域)   3 -> 单个域
+        # 用户级别为全域时，忽略鉴权
+        user = request.user
+        domain = self.domain_model.get_obj(uuid=user.domain)
+        if domain.is_main:
+            if user.is_main:
+                request.user_level = 1
+                return
+            else:
+                request.user_level = 2
+        else:
+            request.user_level = 3
 
         # 开始鉴权
         try:
@@ -95,7 +97,7 @@ class AuthMiddleware(MiddlewareMixin):
 
             # 白名单策略处理
             for white_policy_dict in settings.POLICY_WHITE_LIST:
-                if self.judge_policy(white_policy_dict, request_info):
+                if self.judge_policy(white_policy_dict, service, request_info):
                     return
 
             # 判断能否通过

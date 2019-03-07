@@ -1,7 +1,8 @@
 from op_keystone.exceptions import *
 from django.views import View
 from django.http import JsonResponse, QueryDict
-from utils.tools import json_loader
+from utils import tools
+from utils.dao import DAO
 import re
 
 
@@ -37,7 +38,7 @@ class ParamsProcessMixin:
             if re.search('application/x-www-form-urlencoded', content_type):
                 request_params = QueryDict(request.body)
             elif re.search('application/json', content_type):
-                request_params = json_loader(request_params)
+                request_params = tools.json_loader(request_params)
                 if not request_params:
                     raise RequestParamsError(not_json=True)
             else:
@@ -130,3 +131,85 @@ class BaseView(View, ParamsProcessMixin):
         code = exception.code
         message = exception.__message__()
         return self.standard_response(code=code, message=message)
+
+
+class ResourceView(BaseView):
+    """
+    资源视图类，提供资源的查询和删除方法
+    """
+
+    def __init__(self, model):
+        super().__init__()
+        self._model = DAO(model)
+
+    def get(self, request, uuid=None):
+        try:
+            # 设置 model 结合请求信息
+            self._model.combine_request(request)
+
+            if uuid:
+                obj = self._model.get_obj(uuid=uuid)
+                return self.standard_response(obj.serialize())
+
+            # 定义参数提取列表
+            extra_opts = ['query', 'page', 'page-size']
+            request_params = self.get_params_dict(request, nullable=True)
+            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 查询对象生成
+            query_str = extra_opts_dict.pop('query', None)
+            query_obj = self._model.parsing_query_str(query_str)
+
+            # 当前页数据获取
+            total_list = self._model.get_dict_list(query_obj)
+            page_list = tools.paging_list(total_list, **extra_opts_dict)
+
+            # 返回数据
+            return self.standard_response(page_list)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class M2MRelationView(BaseView):
+    """
+    多对多关系视图类，提供多对多关系的查询方法
+    """
+
+    def __init__(self, from_model, to_model, m2m_model):
+        super().__init__()
+        self._from_model = DAO(from_model)
+        self._to_model = DAO(to_model)
+        self._m2m_model = DAO(m2m_model)
+        self._from_field = from_model.split('.')[-1].lower()
+        self._to_field = to_model.split('.')[-1].lower()
+
+    def get(self, request, uuid):
+        try:
+            # 设置 model 结合请求信息
+            self._from_model.combine_request(request)
+            self._to_model.combine_request(request)
+
+            # 保证来源对象存在
+            self._from_model.get_obj(uuid=uuid)
+
+            # 定义参数提取列表
+            extra_opts = ['query', 'page', 'page-size']
+            request_params = self.get_params_dict(request, nullable=True)
+            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 查询对象生成
+            query_str = extra_opts_dict.pop('query', None)
+            query_obj = self._to_model.parsing_query_str(query_str)
+
+            # 获取目的对象列，并获取当前页数据
+            to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})
+            to_dict_list = self._to_model.get_dict_list(query_obj, uuid__in=to_uuid_list)
+            page_list = tools.paging_list(to_dict_list, **extra_opts_dict)
+
+            # 返回数据
+            return self.standard_response(page_list)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+

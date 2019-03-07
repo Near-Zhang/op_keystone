@@ -1,44 +1,18 @@
 from op_keystone.exceptions import *
-from op_keystone.base_view import BaseView
-from utils.dao import DAO
+from op_keystone.base_view import M2MRelationView
 from utils import tools
 
 
-class M2MGroupRoleView(BaseView):
-    """
-    用户组和角色的基础多对多视图类
-    """
-
-    group_model = DAO('identity.models.Group')
-    role_model = DAO('assignment.models.Role')
-    m2m_model = DAO('identity.models.M2MGroupRole')
-
-
-class GroupToRoleView(M2MGroupRoleView):
+class GroupToRoleView(M2MRelationView):
     """
     通过用户组，对其所属的角色进行增、删、改、查
     """
 
-    def get(self, request, uuid):
-        try:
-            # 保证 group 存在
-            group_uuid = uuid
-            group_obj = self.group_model.get_obj(uuid=group_uuid)
-
-            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
-            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
-                raise PermissionDenied()
-
-            # 获取最新 role 列表
-            role_uuid_list = self.m2m_model.get_field_list('role', group=group_uuid)
-            role_dict_list = self.role_model.get_dict_list(uuid__in=role_uuid_list)
-
-            # 返回最新 role 列表
-            data = tools.paging_list(role_dict_list)
-            return self.standard_response(data)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        from_model = 'identity.models.Group'
+        to_model = 'assignment.models.Role'
+        m2m_model = 'identity.models.M2MGroupRole'
+        super().__init__(from_model, to_model, m2m_model)
 
     def post(self, request, uuid):
         try:

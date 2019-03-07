@@ -1,60 +1,16 @@
-from op_keystone.exceptions import *
-from op_keystone.base_view import BaseView
-from utils import tools
+from op_keystone.exceptions import CustomException, PermissionDenied
+from op_keystone.base_view import ResourceView
 from utils.dao import DAO
 
 
-class RolesView(BaseView):
+class RolesView(ResourceView):
     """
     角色的增、删、改、查
     """
 
-    role_model = DAO('assignment.models.Role')
-
-    def get(self, request):
-        try:
-            # 域权限级别的请求，设置 domain 字段过滤参数
-            if request.privilege_level == 3:
-                domain_opts_dict = {'domain': request.user.domain}
-            else:
-                domain_opts_dict = {}
-
-            # 获取 uuid 参数
-            uuid_opts = ['uuid']
-            request_params = self.get_params_dict(request, nullable=True)
-            uuid_opts_dict = self.extract_opts(request_params, uuid_opts, necessary=False)
-
-            # 若存在 uuid 参数则返回获取的单个对象，先查询自定义角色，在查询内置角色
-            if uuid_opts_dict:
-                try:
-                    obj = self.role_model.get_obj(**uuid_opts_dict, **domain_opts_dict)
-                except ObjectNotExist:
-                    obj = self.role_model.get_obj(**uuid_opts_dict, builtin=True)
-                return self.standard_response(obj.serialize())
-
-            # 定义参数提取列表
-            extra_opts = ['query', 'page', 'page-size']
-            request_params = self.get_params_dict(request, nullable=True)
-            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
-
-            # 查询对象生成
-            query_str = extra_opts_dict.pop('query', None)
-            query_obj = DAO.parsing_query_str(query_str)
-
-            # 当前页数据获取，合并自定义角色和内置角色
-            if request.privilege_level < 3:
-                total_list = self.role_model.get_dict_list()
-            else:
-                total_list = []
-                total_list.extend(self.role_model.get_dict_list(query_obj, builtin=True))
-                total_list.extend(self.role_model.get_dict_list(query_obj, **domain_opts_dict))
-            page_list = tools.paging_list(total_list, **extra_opts_dict)
-
-            # 返回数据
-            return self.standard_response(page_list)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        model = 'assignment.models.Role'
+        super().__init__(model)
 
     def post(self, request):
         try:
@@ -88,7 +44,7 @@ class RolesView(BaseView):
 
             # 创建对象
             check_methods = ('pre_save',)
-            obj = self.role_model.create_obj(check_methods=check_methods, **obj_field)
+            obj = self._model.create_obj(check_methods=check_methods, **obj_field)
 
             # 返回创建的对象
             return self.standard_response(obj.serialize())
@@ -112,7 +68,7 @@ class RolesView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
-            obj = self.role_model.get_obj(**necessary_opts_dict)
+            obj = self._model.get_obj(**necessary_opts_dict)
 
             # 域权限级别的请求，禁止修改前后涉及其他 domain 的对象
             if request.privilege_level == 3 and obj.domain != request.user.domain:
@@ -127,7 +83,7 @@ class RolesView(BaseView):
             # 对象更新
             check_methods = ('pre_save',)
             extra_opts_dict['updated_by'] = request.user.uuid
-            updated_obj = self.role_model.update_obj(obj, check_methods=check_methods, **extra_opts_dict)
+            updated_obj = self._model.update_obj(obj, check_methods=check_methods, **extra_opts_dict)
 
             # 返回更新的对象
             return self.standard_response(updated_obj.serialize())
@@ -141,7 +97,7 @@ class RolesView(BaseView):
             necessary_opts = ['uuid']
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
-            obj = self.role_model.get_obj(**necessary_opts_dict)
+            obj = self._model.get_obj(**necessary_opts_dict)
 
             # 域权限级别的请求，禁止删除涉及其他 domain 的对象
             if request.privilege_level == 3 and obj.domain != request.user.domain:
@@ -153,7 +109,7 @@ class RolesView(BaseView):
 
             # 对象删除
             check_methods = ('pre_delete',)
-            deleted_obj = self.role_model.delete_obj(obj, check_methods=check_methods)
+            deleted_obj = self._model.delete_obj(obj, check_methods=check_methods)
 
             # 返回成功删除
             return self.standard_response('succeed to delete %s' % deleted_obj.name)

@@ -1,10 +1,10 @@
+from op_keystone.base_model import BaseModel, ResourceModel
 from django.db import models
-from utils import tools
 from utils.dao import DAO
 from op_keystone.exceptions import DatabaseError
 
 
-class Role(models.Model):
+class Role(ResourceModel):
 
     class Meta:
         verbose_name = '角色'
@@ -20,38 +20,6 @@ class Role(models.Model):
     builtin = models.BooleanField(default=False, verbose_name='是否内置')
     enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
-
-    # 自动生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-
-    def __init__(self, *args, **kwargs):
-        """
-        实例构建后生成唯一 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = tools.generate_unique_uuid()
-
-    def __str__(self):
-        return '{"uuid"："%s", "name": "%s"}' %(self.uuid, self.name)
-
-    def serialize(self):
-        """
-        对象序列化
-        :return: dict
-        """
-        d = self.__dict__.copy()
-        del d['_state']
-
-        for i in ['created_time', 'updated_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
-        return d
 
     def pre_save(self):
         """
@@ -76,7 +44,7 @@ class Role(models.Model):
         M2MRolePolicy.objects.filter(role=self.uuid).delete()
 
 
-class Policy(models.Model):
+class Policy(ResourceModel):
 
     class Meta:
         verbose_name = '策略'
@@ -96,38 +64,6 @@ class Policy(models.Model):
     builtin = models.BooleanField(default=False, verbose_name='是否内置')
     enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
-
-    # 自动生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-
-    def __init__(self, *args, **kwargs):
-        """
-        实例构建后生成唯一 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = tools.generate_unique_uuid()
-
-    def __str__(self):
-        return '{"uuid"："%s", "name": "%s"}' %(self.uuid, self.name)
-
-    def serialize(self):
-        """
-        对象序列化
-        :return: dict
-        """
-        d = self.__dict__.copy()
-        del d['_state']
-
-        for i in ['created_time', 'updated_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
-        return d
 
     def pre_save(self):
         """
@@ -150,7 +86,7 @@ class Policy(models.Model):
             raise DatabaseError('policy are referenced by roles', self.__class__.__name__)
 
 
-class Action(models.Model):
+class Action(ResourceModel):
 
     class Meta:
         verbose_name = '动作'
@@ -165,38 +101,6 @@ class Action(models.Model):
 
     # 附加字段
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
-
-    # 自动生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-
-    def __init__(self, *args, **kwargs):
-        """
-        实例构建后生成唯一 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = tools.generate_unique_uuid()
-
-    def __str__(self):
-        return '{"uuid"："%s", "name": "%s"}' %(self.uuid, self.name)
-
-    def serialize(self):
-        """
-        对象序列化
-        :return: dict
-        """
-        d = self.__dict__.copy()
-        del d['_state']
-
-        for i in ['created_time', 'updated_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
-        return d
 
     def pre_save(self):
         """
@@ -214,7 +118,7 @@ class Action(models.Model):
             raise DatabaseError('action are referenced by policies', self.__class__.__name__)
 
 
-class M2MRolePolicy(models.Model):
+class M2MRolePolicy(BaseModel):
 
     class Meta:
         verbose_name = '角色和策略的多对多关系'

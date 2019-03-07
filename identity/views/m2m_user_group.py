@@ -1,44 +1,19 @@
-from op_keystone.exceptions import *
-from op_keystone.base_view import BaseView
+from op_keystone.exceptions import CustomException, PermissionDenied
+from op_keystone.base_view import M2MRelationView
 from utils.dao import DAO
 from utils import tools
 
 
-class M2MUserGroupView(BaseView):
-    """
-    用户和组的基础多对多视图类
-    """
-
-    user_model = DAO('identity.models.User')
-    group_model = DAO('identity.models.Group')
-    m2m_model = DAO('identity.models.M2MUserGroup')
-
-
-class UserToGroupView(M2MUserGroupView):
+class UserToGroupView(M2MRelationView):
     """
     通过用户，对其所属的组进行增、删、改、查
     """
 
-    def get(self, request, uuid):
-        try:
-            # 保证 user 存在
-            user_uuid = uuid
-            user_obj = self.user_model.get_obj(uuid=user_uuid)
-
-            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
-            if request.privilege_level == 3 and user_obj.domain != request.user.domain:
-                raise PermissionDenied()
-
-            # 获取最新 group 列表
-            group_uuid_list = self.m2m_model.get_field_list('group', user=user_uuid)
-            group_dict_list = self.group_model.get_dict_list(uuid__in=group_uuid_list)
-
-            # 返回最新 group 列表
-            data = tools.paging_list(group_dict_list)
-            return self.standard_response(data)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        from_model = 'identity.models.User'
+        to_model = 'identity.models.Group'
+        m2m_model = 'identity.models.M2MUserGroup'
+        super().__init__(from_model, to_model, m2m_model)
 
     def post(self, request, uuid):
         try:
@@ -161,31 +136,16 @@ class UserToGroupView(M2MUserGroupView):
             return self.exception_to_response(e)
 
 
-class GroupToUserView(M2MUserGroupView):
+class GroupToUserView(M2MRelationView):
     """
     通过用户组，对其包含的用户进行增、删、改、查
     """
 
-    def get(self, request, uuid):
-        try:
-            # 保证 group 存在
-            group_uuid = uuid
-            group_obj = self.group_model.get_obj(uuid=group_uuid)
-
-            # 非跨域权限级别的请求，禁止查询其他 domain 的对象
-            if request.privilege_level == 3 and group_obj.domain != request.user.domain:
-                raise PermissionDenied()
-
-            # 获取最新 user 列表
-            user_uuid_list = self.m2m_model.get_field_list('user', group=group_uuid)
-            user_dict_list = self.user_model.get_dict_list(uuid__in=user_uuid_list)
-
-            # 返回最新 user 列表
-            data = tools.paging_list(user_dict_list)
-            return self.standard_response(data)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        from_model = 'identity.models.Group'
+        to_model = 'identity.models.User'
+        m2m_model = 'identity.models.M2MUserGroup'
+        super().__init__(from_model, to_model, m2m_model)
 
     def post(self, request, uuid):
         try:

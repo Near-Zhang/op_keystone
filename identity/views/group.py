@@ -1,47 +1,16 @@
-from op_keystone.exceptions import *
-from op_keystone.base_view import BaseView
-from utils import tools
+from op_keystone.exceptions import CustomException, PermissionDenied
+from op_keystone.base_view import ResourceView
 from utils.dao import DAO
 
 
-class GroupsView(BaseView):
+class GroupsView(ResourceView):
     """
     用户组的增、删、改、查
     """
 
-    _model = DAO('identity.models.Group')
-
-    def get(self, request, uuid=None):
-        try:
-            # 域权限级别的请求，设置 domain 字段过滤参数
-            if request.privilege_level == 3:
-                domain_opts_dict = {'domain': request.user.domain}
-            else:
-                domain_opts_dict = {}
-
-            # 若存在路由参数 uuid 则返回获取的单个对象
-            if uuid:
-                obj = self._model.get_obj(uuid=uuid, **domain_opts_dict)
-                return self.standard_response(obj.serialize())
-
-            # 参数提取
-            extra_opts = ['query', 'page', 'page-size']
-            request_params = self.get_params_dict(request, nullable=True)
-            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
-
-            # 查询对象生成
-            query_str = extra_opts_dict.pop('query', None)
-            query_obj = DAO.parsing_query_str(query_str)
-
-            # 当前页数据获取
-            total_list = self._model.get_dict_list(query_obj, **domain_opts_dict)
-            page_list = tools.paging_list(total_list, **extra_opts_dict)
-
-            # 返回数据
-            return self.standard_response(page_list)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        model = 'identity.models.Group'
+        super().__init__(model)
 
     def post(self, request,  uuid=None):
         try:

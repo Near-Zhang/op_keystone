@@ -1,46 +1,17 @@
 from op_keystone.exceptions import *
-from op_keystone.base_view import BaseView
+from op_keystone.base_view import ResourceView
 from utils import tools
 from utils.dao import DAO
 
 
-class EndpointView(BaseView):
+class EndpointView(ResourceView):
     """
     端点的增、删、改、查
     """
 
-    endpoint_model = DAO('catalog.models.Endpoint')
-
-    def get(self, request):
-        try:
-            # 提取 uuid 参数
-            uuid_opts = ['uuid']
-            request_params = self.get_params_dict(request, nullable=True)
-            uuid_opts_dict = self.extract_opts(request_params, uuid_opts, necessary=False)
-
-            # 若存在 uuid 参数则返回获取的单个对象
-            if uuid_opts_dict:
-                obj = self.endpoint_model.get_obj(**uuid_opts_dict)
-                return self.standard_response(obj.serialize())
-
-            # 定义参数提取列表
-            extra_opts = ['query', 'page', 'page-size']
-            request_params = self.get_params_dict(request, nullable=True)
-            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
-
-            # 查询对象生成
-            query_str = extra_opts_dict.pop('query', None)
-            query_obj = DAO.parsing_query_str(query_str)
-
-            # 当前页数据获取
-            total_list = self.endpoint_model.get_dict_list(query_obj)
-            page_list = tools.paging_list(total_list, **extra_opts_dict)
-
-            # 返回数据
-            return self.standard_response(page_list)
-
-        except CustomException as e:
-            return self.exception_to_response(e)
+    def __init__(self):
+        model = 'catalog.models.Endpoint'
+        super().__init__(model)
 
     def post(self, request):
         try:

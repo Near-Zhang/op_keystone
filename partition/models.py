@@ -1,10 +1,10 @@
+from op_keystone.base_model import ResourceModel
 from django.db import models
 from op_keystone.exceptions import *
-from utils import tools
 from utils.dao import DAO
 
 
-class Domain(models.Model):
+class Domain(ResourceModel):
 
     class Meta:
         verbose_name = '域'
@@ -21,36 +21,12 @@ class Domain(models.Model):
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注信息')
 
-    # 自动生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-
-    def __str__(self):
-        return '{"uuid": "%s", "name": "%s"}' %(self.uuid, self.name)
-
-    def __init__(self, *args, **kwargs):
-        """
-        实例构建后生成唯一 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = tools.generate_unique_uuid()
-
     def serialize(self):
         """
         对象序列化
         :return: dict
         """
-        d = self.__dict__.copy()
-        del d['_state']
-
-        for i in ['created_time', 'updated_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
+        d = super().serialize()
 
         # 附加信息
         d['project_count'] = Project.objects.filter(domain=self.uuid).count()
@@ -58,7 +34,6 @@ class Domain(models.Model):
         d['group_count'] = DAO('identity.models.Group').get_obj_qs(domain=self.uuid).count()
         d['custom_role_count'] = DAO('assignment.models.Role').get_obj_qs(domain=self.uuid, builtin=False).count()
         d['custom_policy_count'] = DAO('assignment.models.Policy').get_obj_qs(domain=self.uuid, builtin=False).count()
-
         return d
 
     def pre_save(self):
@@ -83,7 +58,7 @@ class Domain(models.Model):
             raise DatabaseError('this is main domain', self.__class__.__name__)
 
 
-class Project(models.Model):
+class Project(ResourceModel):
 
     class Meta:
         verbose_name = '项目'
@@ -98,39 +73,6 @@ class Project(models.Model):
     # 附加字段
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注')
-
-    # 自动生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-
-    def __str__(self):
-        return '{"uuid": "%s", "name": "%s"}' %(self.uuid, self.name)
-
-    def serialize(self):
-        """
-        对象序列化
-        :return: dict
-        """
-        d = self.__dict__.copy()
-        del d['_state']
-
-        for i in ['created_time', 'updated_time']:
-            d[i] = tools.datetime_to_humanized(d[i])
-
-        return d
-
-    def __init__(self, *args, **kwargs):
-        """
-        实例构建后生成映射 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = tools.generate_unique_uuid()
 
     def pre_save(self):
         """

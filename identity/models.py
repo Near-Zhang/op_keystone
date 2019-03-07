@@ -1,3 +1,4 @@
+from op_keystone.base_model import BaseModel, ResourceModel
 from django.db import models
 from op_keystone.exceptions import *
 from django.contrib.auth.password_validation import validate_password as v_password
@@ -6,7 +7,7 @@ from utils.dao import DAO
 from utils import tools
 
 
-class User(models.Model):
+class User(ResourceModel):
 
     class Meta:
         verbose_name = '用户'
@@ -33,41 +34,23 @@ class User(models.Model):
     qq = models.CharField(max_length=16, null=True, verbose_name='QQ')
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
 
-    # 自动生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+    # 软删除字段
     deleted_by = models.CharField(max_length=32, null=True, verbose_name='删除用户UUID')
     deleted_time = models.DateTimeField(null=True, verbose_name='删除时间')
-
-    def __init__(self, *args, **kwargs):
-        """
-        在实例构建后创生成唯一 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = tools.generate_unique_uuid()
 
     def serialize(self):
         """
         对象序列化
         :return: dict
         """
-        d = self.__dict__.copy()
-        del d['_state']
+        d = super().serialize()
         del d['password']
 
-        for i in ['created_time', 'updated_time', 'deleted_time']:
-            if not d[i] is None:
-                d[i] = tools.datetime_to_humanized(d[i])
+        if not d['deleted_time'] is None:
+            d['deleted_time'] = tools.datetime_to_humanized(d['deleted_time'])
 
         # 附加信息
         d['behavior'] = UserBehavior.objects.get(user=self.uuid).serialize()
-
         return d
 
     def check_password(self, password):
@@ -95,7 +78,6 @@ class User(models.Model):
     def pre_save(self):
         """
         保存前，检查 domain 是否存在，且其中 main user 是否唯一
-        :return:
         """
         domain_obj = DAO('partition.models.Domain').get_obj(uuid=self.domain)
         main_user_qs = self.__class__.objects.filter(domain=self.domain, is_main=True)
@@ -113,7 +95,6 @@ class User(models.Model):
     def pre_delete(self):
         """
         删除前，检查是否为主用户，删除对象的对外关联
-        :return:
         """
         if self.is_main:
             raise DatabaseError('this is the main user', self.__class__.__name__)
@@ -121,7 +102,7 @@ class User(models.Model):
         M2MUserRole.objects.filter(user=self.uuid).delete()
 
 
-class UserBehavior(models.Model):
+class UserBehavior(BaseModel):
 
     class Meta:
         verbose_name = '用户行为'
@@ -142,14 +123,12 @@ class UserBehavior(models.Model):
         del d['_state']
         del d['user']
 
-        for i in ['last_time']:
-            if not d[i] is None:
-                d[i] = tools.datetime_to_humanized(d[i])
-
+        if not d['last_time'] is None:
+            d['last_time'] = tools.datetime_to_humanized(d['last_time'])
         return d
 
 
-class Group(models.Model):
+class Group(ResourceModel):
 
     class Meta:
         verbose_name = '用户组'
@@ -164,37 +143,6 @@ class Group(models.Model):
     # 附加字段
     enable = models.BooleanField(default=True, verbose_name='是否可用')
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
-
-    # 自动生成字段
-    uuid = models.CharField(max_length=32, primary_key=True, verbose_name='UUID')
-    created_by = models.CharField(max_length=32, verbose_name='创建用户UUID')
-    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
-    updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
-    updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-
-    def __init__(self, *args, **kwargs):
-        """
-        实例构建后生成唯一 uuid
-        :param args:
-        :param kwargs:
-        """
-        super().__init__(*args, **kwargs)
-        if not self.uuid:
-            self.uuid = tools.generate_unique_uuid()
-
-    def serialize(self):
-        """
-        对象序列化
-        :return: dict
-        """
-        d = self.__dict__.copy()
-        del d['_state']
-
-        for i in ['created_time', 'updated_time']:
-            if not d[i] is None:
-                d[i] = tools.datetime_to_humanized(d[i])
-
-        return d
 
     def pre_save(self):
         """
@@ -213,7 +161,7 @@ class Group(models.Model):
         M2MGroupRole.objects.filter(group=self.uuid).delete()
 
 
-class M2MUserGroup(models.Model):
+class M2MUserGroup(BaseModel):
 
     class Meta:
         verbose_name = '用户和用户组的多对多关系'
@@ -224,7 +172,7 @@ class M2MUserGroup(models.Model):
     group = models.CharField(max_length=32, verbose_name='组UUID')
 
 
-class M2MUserRole(models.Model):
+class M2MUserRole(BaseModel):
 
     class Meta:
         verbose_name = '用户和角色的多对多关系'
@@ -235,7 +183,7 @@ class M2MUserRole(models.Model):
     role = models.CharField(max_length=32, verbose_name='角色UUID')
 
 
-class M2MGroupRole(models.Model):
+class M2MGroupRole(BaseModel):
 
     class Meta:
         verbose_name = '用户组和角色的多对多关系'
