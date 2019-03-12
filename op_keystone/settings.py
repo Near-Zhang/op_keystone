@@ -61,6 +61,9 @@ WSGI_APPLICATION = 'op_keystone.wsgi.application'
 
 DATABASES = MYSQL_CONFIG
 
+# Cache
+CACHES = REDIS_CONFIG
+
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators

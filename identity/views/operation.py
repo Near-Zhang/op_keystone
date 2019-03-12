@@ -5,6 +5,7 @@ from utils.dao import DAO
 from django.conf import settings
 from django.http.response import HttpResponse
 from io import BytesIO
+from django.core.cache import cache
 
 
 class LoginView(BaseView):
@@ -19,6 +20,20 @@ class LoginView(BaseView):
 
     def post(self, request):
         try:
+            # 验证码参数提取
+            captcha_opts = [
+                'captcha_key',
+                'captcha_value'
+            ]
+            request_params = self.get_params_dict(request)
+            captcha_opts_dict = self.extract_opts(request_params, captcha_opts)
+
+            # 验证码校验
+            captcha_value = captcha_opts_dict['captcha_value'].lower()
+            captcha_value_exp = cache.get(captcha_opts_dict['captcha_key']).lower()
+            if captcha_value != captcha_value_exp:
+                raise CaptchaError()
+
             # 类型参数提取
             type_opts = [
                 {
@@ -27,7 +42,6 @@ class LoginView(BaseView):
                     'values': ['phone', 'email', 'username']
                 }
             ]
-            request_params = self.get_params_dict(request)
             type_opts_dict = self.extract_opts(request_params, type_opts)
 
             # 根据类型确定登陆参数
@@ -125,7 +139,7 @@ class LoginView(BaseView):
                 return self.standard_response(data)
 
             # 登陆信息校验阶段失败，返回统一信息
-            except CustomException as e:
+            except CustomException:
                 raise LoginFailed()
 
         except CustomException as e:
@@ -245,11 +259,21 @@ class Captcha(BaseView):
     """
 
     def get(self, request):
-        captcha_img, captcha_str = tools.generate_captcha_img()
+        # 参数提取
+        necessary_opts = ['captcha-key']
+        request_params = self.get_params_dict(request)
+        necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+        # 生成验证码，以及保存
+        captcha_img, captcha_value = tools.generate_captcha_img()
         bytes_mem = BytesIO()
         captcha_img.save(bytes_mem, 'png')
-        print(captcha_str)
 
+        # 验证码信息存入缓存
+        captcha_key = necessary_opts_dict['captcha_key']
+        cache.set(captcha_key, captcha_value)
+
+        # 返回图片响应
         return HttpResponse(bytes_mem.getvalue(), content_type='image/png')
 
 

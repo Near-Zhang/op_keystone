@@ -84,6 +84,16 @@ class PasswordError(CustomException):
         super().__init__(exception_message)
 
 
+class CaptchaError(CustomException):
+    """
+    验证码错误
+    """
+    def __init__(self):
+        self.code = 400
+        exception_message = 'captcha value is error'
+        super().__init__(exception_message)
+
+
 class PasswordInvalid(CustomException):
     """
     密码内容不符合有效标准
