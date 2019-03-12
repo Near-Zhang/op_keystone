@@ -1,6 +1,5 @@
-from op_keystone.exceptions import CustomException, PermissionDenied
 from op_keystone.base_view import ResourceView
-from utils.dao import DAO
+from ..models import Policy
 
 
 class PoliciesView(ResourceView):
@@ -9,93 +8,5 @@ class PoliciesView(ResourceView):
     """
 
     def __init__(self):
-        model = 'assignment.models.Policy'
+        model = Policy
         super().__init__(model)
-
-    def post(self, request):
-        try:
-            # 定义参数提取列表
-            necessary_opts = [
-                'name', 'action', 'effect',
-                'res'
-            ]
-            extra_opts = [
-                'condition', 'comment', 'enable'
-            ]
-
-            # 非域权限级别的请求，进行参数提取列表补充
-            if request.privilege_level < 3:
-                extra_opts.extend([
-                    'domain', 'builtin'
-                ])
-
-            # 参数提取，若资源位置不存在，则去除其他资源相关参数提取
-            request_params = self.get_params_dict(request)
-            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
-            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
-
-            # 跨域权限级别的请求，禁止创建涉及主 domain 的对象
-            if request.privilege_level == 2:
-                if extra_opts_dict.get('domain') is None or extra_opts_dict.get('domain') == request.user.domain:
-                    raise PermissionDenied()
-
-            # 参数合成，预设 domain、create_by 的值，转化字段值为 json 字符串
-            obj_field = {
-                'domain': request.user.domain,
-                'created_by': request.user.uuid
-            }
-            obj_field.update(necessary_opts_dict)
-            obj_field.update(extra_opts_dict)
-
-            # 对象创建
-            check_methods = ('pre_save',)
-            obj = self._model.create_obj(check_methods=check_methods, **obj_field)
-
-            # 返回创建的对象
-            return self.standard_response(obj.serialize())
-
-        except CustomException as e:
-            return self.exception_to_response(e)
-
-    def put(self, request):
-        try:
-            # 定义参数提取列表
-            necessary_opts = ['uuid']
-            extra_opts = [
-                'name', 'action', 'effect',
-                'res', 'condition', 'enable',
-                'comment'
-            ]
-
-            # 非域权限级别的请求，进行参数提取列表补充
-            if request.privilege_level < 3:
-                extra_opts.extend([
-                    'domain', 'builtin'
-                ])
-
-            # 参数提取并获取对象
-            request_params = self.get_params_dict(request)
-            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
-            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
-            obj = self._model.get_obj(**necessary_opts_dict)
-
-            # 域权限级别的请求，禁止修改前后涉及其他 domain 的对象
-            if request.privilege_level == 3 and obj.domain != request.user.domain:
-                raise PermissionDenied()
-
-            # 跨域权限级别的请求，禁止修改前后涉及主 domain 的对象
-            if request.privilege_level == 2:
-                if extra_opts_dict.get('domain') is None or extra_opts_dict.get('domain') == request.user.domain \
-                        or obj.domain == request.user.domain:
-                    raise PermissionDenied()
-
-            # 对象更新，转化字段值为 json 字符串
-            extra_opts_dict['updated_by'] = request.user.uuid
-            check_methods = ('pre_save',)
-            updated_obj = self._model.update_obj(obj, check_methods=check_methods, **extra_opts_dict)
-
-            # 返回更新的对象
-            return self.standard_response(updated_obj.serialize())
-
-        except CustomException as e:
-            return self.exception_to_response(e)

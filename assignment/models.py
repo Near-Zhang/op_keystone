@@ -32,6 +32,25 @@ class Role(ResourceModel):
         else:
             DAO('partition.models.Domain').get_obj(uuid=self.domain)
 
+    def pre_update(self):
+        """
+        更新前，检查 domain 是否存在，以及是否内置
+        """
+        if self.builtin:
+            self.domain = DAO('partition.models.Domain').get_obj(is_main=True).uuid
+        else:
+            DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+    def pre_delete(self):
+        """
+        删除前，检查对象的对外关联
+        """
+        if DAO('identity.models.M2MUserRole').get_obj_qs(role=self.uuid).count() > 0:
+            raise DatabaseError('role are referenced by users', self.__class__.__name__)
+        if DAO('identity.models.M2MGroupRole').get_obj_qs(role=self.uuid).count() > 0:
+            raise DatabaseError('role are referenced by groups', self.__class__.__name__)
+        DAO(M2MRolePolicy).delete_obj_qs(role=self.uuid)
+
     @staticmethod
     def get_field_opts(create=True):
         """
@@ -46,28 +65,6 @@ class Role(ResourceModel):
             return necessary, extra, senior_extra
         else:
             return necessary + extra, senior_extra
-
-    def pre_save(self):
-        """
-        保存前，检查 domain 是否存在，当角色为 builtin 时固定 domain 为 main domain
-        :return:
-        """
-        domain_model = DAO('partition.models.Domain')
-        if self.builtin:
-            self.domain = domain_model.get_obj(is_main=True).uuid
-        else:
-            domain_model.get_obj(uuid=self.domain)
-
-    def pre_delete(self):
-        """
-        删除前，检查对象的对外关联
-        :return:
-        """
-        if DAO('identity.models.M2MUserRole').get_obj_qs(role=self.uuid).count() > 0:
-            raise DatabaseError('role are referenced by users', self.__class__.__name__)
-        if DAO('identity.models.M2MGroupRole').get_obj_qs(role=self.uuid).count() > 0:
-            raise DatabaseError('role are referenced by groups', self.__class__.__name__)
-        M2MRolePolicy.objects.filter(role=self.uuid).delete()
 
 
 class Policy(ResourceModel):
@@ -91,17 +88,28 @@ class Policy(ResourceModel):
     enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
 
-    def pre_save(self):
+    def pre_create(self):
         """
-        保存前，检查 domain、service 是否存在，当策略为 builtin 时固定 domain 为 main domain
-        :return:
+        创建前，检查 domain、action 是否存在，以及是否内置
         """
-        DAO('assignment.models.Action').get_obj(uuid=self.action)
-        domain_model = DAO('partition.models.Domain')
+        super().pre_create()
+        DAO(Action).get_obj(uuid=self.action)
+
         if self.builtin:
-            self.domain = domain_model.get_obj(is_main=True).uuid
+            self.domain = DAO('partition.models.Domain').get_obj(is_main=True).uuid
         else:
-            domain_model.get_obj(uuid=self.domain)
+            DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+    def pre_update(self):
+        """
+        更新前，检查 domain、action 是否存在，以及是否内置
+        """
+        DAO(Action).get_obj(uuid=self.action)
+
+        if self.builtin:
+            self.domain = DAO('partition.models.Domain').get_obj(is_main=True).uuid
+        else:
+            DAO('partition.models.Domain').get_obj(uuid=self.domain)
 
     def pre_delete(self):
         """
@@ -110,6 +118,22 @@ class Policy(ResourceModel):
         """
         if M2MRolePolicy.objects.filter(policy=self.uuid).count() > 0:
             raise DatabaseError('policy are referenced by roles', self.__class__.__name__)
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
+        :return:
+        """
+        necessary = ['name', 'action', 'effect',
+                     'res']
+        extra = ['condition', 'comment', 'enable']
+        senior_extra = ['domain', 'builtin']
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
 
 
 class Action(ResourceModel):
@@ -128,10 +152,16 @@ class Action(ResourceModel):
     # 附加字段
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
 
-    def pre_save(self):
+    def pre_create(self):
         """
-        保存前，检查 service 是否存在
-        :return:
+        创建前，检查 service 是否存在
+        """
+        super().pre_create()
+        DAO('catalog.models.Service').get_obj(uuid=self.service)
+
+    def pre_update(self):
+        """
+        更新前，检查 service 是否存在
         """
         DAO('catalog.models.Service').get_obj(uuid=self.service)
 
@@ -140,8 +170,24 @@ class Action(ResourceModel):
         删除前，检查对象的对外关联
         :return:
         """
-        if Policy.objects.filter(action=self.uuid).count() > 0:
+        if DAO(Policy).get_obj_qs(action=self.uuid).count() > 0:
             raise DatabaseError('action are referenced by policies', self.__class__.__name__)
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
+        :return:
+        """
+        necessary = ['name', 'service', 'url',
+                     'method']
+        extra = ['comment']
+        senior_extra = []
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
 
 
 class M2MRolePolicy(BaseModel):

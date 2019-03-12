@@ -77,10 +77,11 @@ class DAO:
             if not self.model.get_field('domain'):
                 raise PermissionDenied()
 
-            # 含有 domain、builtin 字段的模型，不允许资源操作非所属用户 domain 的对象、多对多操作非内置对象
+            # 含有 domain、builtin 字段的模型，不允许资源操作非所属用户 domain 的对象、多对多操作非所属用户且非内置对象
             elif self.model.get_field('builtin'):
-                if (not m2m and obj.domain != self.user.domain) or (m2m and not obj.builtin):
-                    raise PermissionDenied()
+                if obj.domain != self.user.domain:
+                    if not m2m or (m2m and not obj.builtin):
+                        raise PermissionDenied()
 
             # 只含有 domain 字段的模型，不允许操作非所属用户 domain 的对象
             elif obj.domain != self.user.domain:
@@ -97,10 +98,11 @@ class DAO:
             elif not self.model.get_field('domain'):
                 raise PermissionDenied()
 
-            # 含有 domain、builtin 字段的模型，不允许资源操作主 domain 对象、多对多操作非内置对象
+            # 含有 domain、builtin 字段的模型，不允许资源操作主 domain 对象、多对多操作主 domain 且非内置对象
             elif self.model.get_field('builtin'):
-                if (not m2m and obj.domain == self.user.domain) or (m2m and not obj.builtin):
-                    raise PermissionDenied()
+                if obj.domain == self.user.domain:
+                    if not m2m or (m2m and not obj.builtin):
+                        raise PermissionDenied()
 
             # 只含有 domain 字段的模型，不允许操作主 domain 的对象
             elif obj.domain == self.user.domain:
@@ -157,10 +159,15 @@ class DAO:
         if not self.model.get_field('domain'):
             if self.user.level == 3:
                 raise PermissionDenied()
+
         if self.user.level == 2:
             # 跨域级别不允许操作包含 domain 字段的模型的主 domain 的对象
             if self.model.get_field('domain') and field_opts['domain'] == self.user.domain:
                 raise PermissionDenied()
+            # 跨域级别不允许操作包含 builtin 字段的模型的主 builtin 的对象
+            if self.model.get_field('builtin') and field_opts['builtin']:
+                raise PermissionDenied()
+
 
         return field_opts
 

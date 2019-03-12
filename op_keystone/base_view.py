@@ -306,7 +306,13 @@ class M2MRelationView(BaseView):
 
             # 保证每个目标对象存在，然后添加多对多关系
             for to_uuid in add_to_opts_list:
-                self._to_model.get_obj(uuid=to_uuid)
+                to_obj = self._to_model.get_obj(uuid=to_uuid)
+                if self._from_field == 'role' or self._from_field == 'policy':
+                    self._to_model.validate_obj(to_obj)
+                    if (self._to_field == 'role' and to_obj.builtin) or \
+                            (self._to_field == 'policy' and from_obj.builtin):
+                        raise PermissionDenied()
+
                 self._m2m_model.create_obj(**{
                     self._from_field: uuid,
                     self._to_field: to_uuid
@@ -346,17 +352,37 @@ class M2MRelationView(BaseView):
 
             # 保证每个目标对象存在，然后添加多对多关系
             for to_uuid in add_to_opts_list:
-                self._to_model.get_obj(uuid=to_uuid)
+                to_obj = self._to_model.get_obj(uuid=to_uuid)
+                if self._from_field == 'role' or self._from_field == 'policy':
+                    self._to_model.validate_obj(to_obj)
+                    if (self._to_field == 'role' and to_obj.builtin) or \
+                            (self._to_field == 'policy' and from_obj.builtin):
+                        raise PermissionDenied()
+
                 self._m2m_model.create_obj(**{
                     self._from_field: uuid,
                     self._to_field: to_uuid
                 })
 
             # 删除多对多关系
-            self._m2m_model.delete_obj_qs(**{
-                self._from_field: uuid,
-                self._to_field + '__in': del_to_opts_list
-            })
+            for to_uuid in del_to_opts_list:
+                try:
+                    to_obj = self._to_model.get_obj(uuid=to_uuid)
+                except CustomException:
+                    self._m2m_model.delete_obj_qs(**{
+                        self._from_field: uuid,
+                        self._to_field: to_uuid
+                    })
+                else:
+                    if self._from_field == 'role' or self._from_field == 'policy':
+                        self._to_model.validate_obj(to_obj)
+                        if (self._to_field == 'role' and to_obj.builtin) or \
+                                (self._to_field == 'policy' and from_obj.builtin):
+                            raise PermissionDenied()
+                    self._m2m_model.delete_obj_qs(**{
+                        self._from_field: uuid,
+                        self._to_field: to_uuid
+                    })
 
             # 获取最新目标对象列表，不分页获取列表所有数据
             to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})
@@ -390,10 +416,24 @@ class M2MRelationView(BaseView):
             del_to_opts_list = list(to_opts_set & old_to_opts_set)
 
             # 删除多对多关系
-            self._m2m_model.delete_obj_qs(**{
-                self._from_field: uuid,
-                self._to_field + '__in': del_to_opts_list
-            })
+            for to_uuid in del_to_opts_list:
+                try:
+                    to_obj = self._to_model.get_obj(uuid=to_uuid)
+                except CustomException:
+                    self._m2m_model.delete_obj_qs(**{
+                        self._from_field: uuid,
+                        self._to_field: to_uuid
+                    })
+                else:
+                    if self._from_field == 'role' or self._from_field == 'policy':
+                        self._to_model.validate_obj(to_obj)
+                        if (self._to_field == 'role' and to_obj.builtin) or \
+                                (self._to_field == 'policy' and from_obj.builtin):
+                            raise PermissionDenied()
+                    self._m2m_model.delete_obj_qs(**{
+                        self._from_field: uuid,
+                        self._to_field: to_uuid
+                    })
 
             # 获取最新目标对象列表，不分页获取列表所有数据
             to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})

@@ -1,5 +1,6 @@
 from op_keystone.base_model import ResourceModel
 from django.db import models
+from utils.dao import DAO
 
 
 class Service(ResourceModel):
@@ -15,6 +16,13 @@ class Service(ResourceModel):
     # 附加字段
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注信息')
+
+    def pre_delete(self):
+        """
+        删除前，检查对象的对外关联
+        :return:
+        """
+        DAO(Endpoint).delete_obj_qs(service=self.uuid)
 
 
 class Endpoint(ResourceModel):
@@ -32,3 +40,16 @@ class Endpoint(ResourceModel):
     # 附加字段
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注信息')
+
+    def pre_create(self):
+        """
+        创建前，检查 service 是否存在
+        """
+        super().pre_create()
+        DAO(Service).get_obj(uuid=self.service)
+
+    def pre_update(self):
+        """
+        更新前，检查 service 是否存在
+        """
+        DAO(Service).get_obj(uuid=self.service)
