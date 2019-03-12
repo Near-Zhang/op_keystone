@@ -144,9 +144,10 @@ class ResourceView(BaseView):
 
     def get(self, request, uuid=None):
         try:
-            # 设置 model 结合请求信息
+            # 结合请求信息，设置到 model 属性
             self._model.combine_request(request)
 
+            # 存在 uuid 路由参数，返回单个对象
             if uuid:
                 obj = self._model.get_obj(uuid=uuid)
                 return self.standard_response(obj.serialize())
@@ -170,6 +171,76 @@ class ResourceView(BaseView):
         except CustomException as e:
             return self.exception_to_response(e)
 
+    def post(self, request, uuid=None):
+        try:
+            # 结合请求信息，设置到 model 属性
+            self._model.combine_request(request)
+
+            # 校验创建对象权限
+            self._model.validate_create()
+
+            # 获取提取列表
+            necessary_opts, extra_opts = self._model.get_opts()
+
+            # 选项参数提取
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 对象字段字典参数合成，结合请求信息，校验选项参数
+            field_opts = self._model.validate_opts_dict(necessary_opts_dict, extra_opts_dict)
+
+            # 对象创建并返回
+            obj = self._model.create_obj(**field_opts)
+            return self.standard_response(obj.serialize())
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+    def put(self, request, uuid=None):
+        try:
+            # 结合请求信息，设置到 model 属性
+            self._model.combine_request(request)
+
+            # 若 uuid 不存在，发生路由参数异常，否则获取对象，并校验对象权限
+            if not uuid:
+                raise RoutingParamsError()
+            obj = self._model.get_obj(uuid=uuid)
+            self._model.validate_obj(obj)
+
+            # 选项参数提取
+            extra_opts = self._model.get_opts(create=False)
+            request_params = self.get_params_dict(request)
+            extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
+
+            # 对象字段字典参数合成，结合请求信息，校验选项参数
+            field_opts = self._model.validate_opts_dict(extra_opts_dict)
+
+            # 对象更新并返回
+            updated_obj = self._model.update_obj(obj, **field_opts)
+            return self.standard_response(updated_obj.serialize())
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+    def delete(self, request, uuid=None):
+        try:
+            # 结合请求信息，设置 model 属性
+            self._model.combine_request(request)
+
+            # 若 uuid 不存在，发生路由参数异常，否则获取对象，并校验对象权限
+            if not uuid:
+                raise RoutingParamsError()
+            obj = self._model.get_obj(uuid=uuid)
+            self._model.validate_obj(obj)
+
+            # 对象删除并返回删除信息
+            deleted_message = self._model.delete_obj(obj)
+            return self.standard_response(deleted_message)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
 
 class M2MRelationView(BaseView):
     """
@@ -181,19 +252,19 @@ class M2MRelationView(BaseView):
         self._from_model = DAO(from_model)
         self._to_model = DAO(to_model)
         self._m2m_model = DAO(m2m_model)
-        self._from_field = from_model.split('.')[-1].lower()
-        self._to_field = to_model.split('.')[-1].lower()
+        self._from_field = self._from_model.model.__name__.lower()
+        self._to_field = self._to_model.model.__name__.lower()
 
     def get(self, request, uuid):
         try:
-            # 设置 model 结合请求信息
+            # 结合请求信息，设置 model 查询参数
             self._from_model.combine_request(request)
             self._to_model.combine_request(request)
 
             # 保证来源对象存在
             self._from_model.get_obj(uuid=uuid)
 
-            # 定义参数提取列表
+            # 参数提取
             extra_opts = ['query', 'page', 'page-size']
             request_params = self.get_params_dict(request, nullable=True)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
@@ -202,7 +273,7 @@ class M2MRelationView(BaseView):
             query_str = extra_opts_dict.pop('query', None)
             query_obj = self._to_model.parsing_query_str(query_str)
 
-            # 获取目的对象列，并获取当前页数据
+            # 获取目的对象列表，并获取当前页数据
             to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})
             to_dict_list = self._to_model.get_dict_list(query_obj, uuid__in=to_uuid_list)
             page_list = tools.paging_list(to_dict_list, **extra_opts_dict)
@@ -212,4 +283,127 @@ class M2MRelationView(BaseView):
 
         except CustomException as e:
             return self.exception_to_response(e)
+
+    def post(self, request, uuid):
+        try:
+            # 结合请求信息，设置 model 查询参数
+            self._from_model.combine_request(request)
+            self._to_model.combine_request(request)
+
+            # 保证源对象存在，校验对象权限合法性
+            from_obj = self._from_model.get_obj(uuid=uuid)
+            self._from_model.validate_obj(from_obj, m2m=True)
+
+            # 参数提取
+            necessary_opts = ['uuid_list']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 获取需要添加的目标对象 uuid 列表
+            to_opts_set = set(necessary_opts_dict['uuid_list'])
+            old_to_opts_set = set(self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid}))
+            add_to_opts_list = list(to_opts_set - old_to_opts_set)
+
+            # 保证每个目标对象存在，然后添加多对多关系
+            for to_uuid in add_to_opts_list:
+                self._to_model.get_obj(uuid=to_uuid)
+                self._m2m_model.create_obj(**{
+                    self._from_field: uuid,
+                    self._to_field: to_uuid
+                })
+
+            # 获取最新目标对象列表，不分页获取列表所有数据
+            to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})
+            to_dict_list = self._to_model.get_dict_list(uuid__in=to_uuid_list)
+            page_list = tools.paging_list(to_dict_list)
+
+            # 返回数据
+            return self.standard_response(page_list)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+    def put(self, request, uuid):
+        try:
+            # 结合请求信息，设置 model 查询参数
+            self._from_model.combine_request(request)
+            self._to_model.combine_request(request)
+
+            # 保证源对象存在，校验对象权限合法性
+            from_obj = self._from_model.get_obj(uuid=uuid)
+            self._from_model.validate_obj(from_obj, m2m=True)
+
+            # 参数提取
+            necessary_opts = ['uuid_list']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 获取需要添加和删除的目标对象 uuid 列表
+            to_opts_set = set(necessary_opts_dict['uuid_list'])
+            old_to_opts_set = set(self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid}))
+            add_to_opts_list = list(to_opts_set - old_to_opts_set)
+            del_to_opts_list = list(old_to_opts_set - to_opts_set)
+
+            # 保证每个目标对象存在，然后添加多对多关系
+            for to_uuid in add_to_opts_list:
+                self._to_model.get_obj(uuid=to_uuid)
+                self._m2m_model.create_obj(**{
+                    self._from_field: uuid,
+                    self._to_field: to_uuid
+                })
+
+            # 删除多对多关系
+            self._m2m_model.delete_obj_qs(**{
+                self._from_field: uuid,
+                self._to_field + '__in': del_to_opts_list
+            })
+
+            # 获取最新目标对象列表，不分页获取列表所有数据
+            to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})
+            to_dict_list = self._to_model.get_dict_list(uuid__in=to_uuid_list)
+            page_list = tools.paging_list(to_dict_list)
+
+            # 返回数据
+            return self.standard_response(page_list)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+    def delete(self, request, uuid):
+        try:
+            # 结合请求信息，设置 model 查询参数
+            self._from_model.combine_request(request)
+            self._to_model.combine_request(request)
+
+            # 保证源对象存在，校验对象权限合法性
+            from_obj = self._from_model.get_obj(uuid=uuid)
+            self._from_model.validate_obj(from_obj, m2m=True)
+
+            # 参数提取
+            necessary_opts = ['uuid_list']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 获取需要删除的 group uuid 列表
+            to_opts_set = set(necessary_opts_dict['uuid_list'])
+            old_to_opts_set = set(self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid}))
+            del_to_opts_list = list(to_opts_set & old_to_opts_set)
+
+            # 删除多对多关系
+            self._m2m_model.delete_obj_qs(**{
+                self._from_field: uuid,
+                self._to_field + '__in': del_to_opts_list
+            })
+
+            # 获取最新目标对象列表，不分页获取列表所有数据
+            to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})
+            to_dict_list = self._to_model.get_dict_list(uuid__in=to_uuid_list)
+            page_list = tools.paging_list(to_dict_list)
+
+            # 返回数据
+            return self.standard_response(page_list)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
 

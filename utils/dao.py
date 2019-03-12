@@ -1,5 +1,5 @@
-from op_keystone.base_model import BaseModel
-from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
+from op_keystone.base_model import BaseModel, ResourceModel
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import Error
 from op_keystone.exceptions import *
 from utils import tools
@@ -22,28 +22,147 @@ class DAO:
             raise ValueError()
 
         self.model = model
+        self.user = None
         self.query_obj = Q()
         if self.model.get_field('deleted_time'):
             self.query_obj = Q(deleted_time__isnull=True)
+        self.init_opts_dict = {}
 
     def combine_request(self, request):
         """
-        融合请求的信息，更新 dao 对象的操作属性
-        :param request:
+        融合请求信息，更新 dao 对象的相关属性
+        :param request:  请求对象
         :return:
         """
-        # 当用户级别为单个域时
-        if request.user_level == 3:
+        self.user = request.user
+
+        # 单个域级别需要设置查询限制
+        if self.user.level == 3:
             if self.model.__name__ == 'Domain':
                 # 对于 domain 模型，只允许查询用户所在 domain
-                self.query_obj &= Q(uuid=request.user.domain)
+                self.query_obj &= Q(uuid=self.user.domain)
             if self.model.get_field('domain'):
                 if self.model.get_field('builtin'):
                     # 对于包含 domain、builtin 字段的模型，只允许查询用户所在 domain 以及内置的对象
-                    self.query_obj &= (Q(domain=request.user.domain) | Q(builtin=True))
+                    self.query_obj &= (Q(domain=self.user.domain) | Q(builtin=True))
                 else:
                     # 对于包含 domain 字段的模型，只允许查询用户所在 domain 的对象
-                    self.query_obj &= Q(domain=request.user.domain)
+                    self.query_obj &= Q(domain=self.user.domain)
+
+    def validate_create(self):
+        """
+        融合请求的信息，校验是否有创建对象的权限
+        """
+        if not self.user:
+            raise AttributeError('the attribute user is not set')
+
+        if self.user.level != 1 and not self.model.get_field('domain'):
+            if self.model.__name__ != 'Domain':
+                raise PermissionDenied()
+            elif self.user.level == 3:
+                raise PermissionDenied()
+
+    def validate_obj(self, obj, m2m=False):
+        """
+        融合请求的信息，校验对象的权限合法性，用于修改和删除对象
+        :param obj: model object
+        :param m2m: bool, 是否为关联性操作
+        """
+        if not self.user:
+            raise AttributeError('the attribute user is not set')
+
+        # 单个域用户级别，可以查询到自身 domain 以及所属对象、内置对象，所有无 domain 字段对象
+        if self.user.level == 3:
+            # 没有 domain 字段的模型，不允许操作
+            if not self.model.get_field('domain'):
+                raise PermissionDenied()
+
+            # 含有 domain、builtin 字段的模型，不允许资源操作非所属用户 domain 的对象、多对多操作非内置对象
+            elif self.model.get_field('builtin'):
+                if (not m2m and obj.domain != self.user.domain) or (m2m and not obj.builtin):
+                    raise PermissionDenied()
+
+            # 只含有 domain 字段的模型，不允许操作非所属用户 domain 的对象
+            elif obj.domain != self.user.domain:
+                raise PermissionDenied()
+
+        # 跨域用户级别，可以查询到所有对象
+        if self.user.level == 2:
+            # domain 模型，不允许操作主 domain
+            if self.model.__name__ == 'Domain':
+                if obj.uuid == self.user.domain:
+                    raise PermissionDenied()
+
+            # 没有 domain 字段的模型，不允许操作
+            elif not self.model.get_field('domain'):
+                raise PermissionDenied()
+
+            # 含有 domain、builtin 字段的模型，不允许资源操作主 domain 对象、多对多操作非内置对象
+            elif self.model.get_field('builtin'):
+                if (not m2m and obj.domain == self.user.domain) or (m2m and not obj.builtin):
+                    raise PermissionDenied()
+
+            # 只含有 domain 字段的模型，不允许操作主 domain 的对象
+            elif obj.domain == self.user.domain:
+                raise PermissionDenied()
+
+    def get_opts(self, create=True):
+        """
+        融合请求的信息，获取创建对象需要的选项列表
+        :return:
+        """
+        if not self.user:
+            raise AttributeError('the attribute user is not set')
+        if not issubclass(self.model, ResourceModel):
+            raise ValueError('the model is not a subclass of ResourceModel')
+        if create:
+            # 初始选项字典设置
+            self.init_opts_dict['created_by'] = self.user.uuid
+            if self.model.get_field('domain'):
+                self.init_opts_dict['domain'] = self.user.domain
+
+            # 选项列表获取
+            necessary, extra, senior_extra = getattr(self.model, 'get_field_opts')()
+            if self.user.level == 3:
+                return necessary, extra
+            else:
+                return necessary, extra + senior_extra
+        else:
+            # 初始选项字典设置
+            self.init_opts_dict['updated_by'] = self.user.uuid
+
+            # 选项列表获取
+            extra, senior_extra = getattr(self.model, 'get_field_opts')(create=False)
+            if self.user.level == 3:
+                return extra
+            else:
+                return extra + senior_extra
+
+    def validate_opts_dict(self, *opts_dicts):
+        """
+        融合请求的信息，校验选项字典的权限合法性，新增对象使用
+        :param opts_dicts: 选项字典
+        :return: dict, 字段参数字典
+        """
+        if not self.init_opts_dict:
+            raise AttributeError('the attribute init_opts_dict is not set')
+
+        # 完整对象字段字典参数合成
+        field_opts = {}
+        field_opts.update(self.init_opts_dict)
+        for opts_dict in opts_dicts:
+            field_opts.update(opts_dict)
+
+        # 校验字段字典
+        if not self.model.get_field('domain'):
+            if self.user.level == 3:
+                raise PermissionDenied()
+        if self.user.level == 2:
+            # 跨域级别不允许操作包含 domain 字段的模型的主 domain 的对象
+            if self.model.get_field('domain') and field_opts['domain'] == self.user.domain:
+                raise PermissionDenied()
+
+        return field_opts
 
     @staticmethod
     def parsing_query_str(query_str):
@@ -119,66 +238,78 @@ class DAO:
             field_list.append(getattr(obj, field))
         return field_list
 
-    def create_obj(self, check_methods=(), **kwargs):
+    def create_obj(self, **field_opts):
         """
-        创建一个对象到模型中
-        :param check_methods: tuple, 包含多个用于自检的方法名的元祖
-        :param kwargs: dict, 列参数
+        在模型中创建一个对象
+        :param field_opts: dict, 列参数
         :return: model object
         """
-        obj = self.model(**kwargs)
-        for cm in check_methods:
-            getattr(obj, cm)()
+        obj = self.model(**field_opts)
+        obj.pre_create()
 
         try:
             obj.save()
         except Error as e:
             msg = e.args[1]
             raise DatabaseError(msg, self.model.__name__) from e
-        else:
-            return obj
 
-    def update_obj(self, obj, check_methods=(), **kwargs):
-        """
-        从模型中修改一个对象
-        :param obj: model object, 对象
-        :param check_methods: tuple, 包含多个用于自检的方法名的元祖
-        :param kwargs: dict, 列参数
-        :return: model object
-        """
-        for i in kwargs:
-            setattr(obj, i, kwargs[i])
-        for cm in check_methods:
-            getattr(obj, cm)()
-
-        try:
-            obj.save()
-        except Error as e:
-            msg = e.args[1]
-            raise DatabaseError(msg, self.model.__name__) from e
-        else:
-            return obj
-
-    def delete_obj(self, obj, check_methods=(), deleted_by=None):
-        """
-        从模型中删除一个对象，自行区分是否软删除
-        :param obj: model object, 对象
-        :param check_methods: tuple, 包含多个用于自检的方法名的元祖
-        :param deleted_by: str, 删除用户 uuid，软删除需要
-        :return: model object
-        """
-        for cm in check_methods:
-            getattr(obj, cm)()
-
-        if hasattr(obj, 'deleted_time'):
-            soft_deleted_dict = {
-                'deleted_time': tools.get_datetime_with_tz(),
-                'deleted_by': deleted_by
-            }
-            obj = self.update_obj(obj, **soft_deleted_dict)
-        else:
-            obj.delete()
-
+        obj.post_create()
         return obj
+
+    def update_obj(self, obj, **field_opts):
+        """
+        从模型中修改一个指定对象
+        :param obj: model object, 对象
+        :param field_opts: dict, 字段参数
+        :return: model object
+        """
+        for i in field_opts:
+            setattr(obj, i, field_opts[i])
+        obj.pre_update()
+
+        try:
+            obj.save()
+        except Error as e:
+            msg = e.args[1]
+            raise DatabaseError(msg, self.model.__name__) from e
+
+        obj.post_update()
+        return obj
+
+    def delete_obj(self, obj):
+        """
+        从模型中删除一个指定对象，自动区分并进行软删除
+        :param obj: model object, 对象
+        :return: str, 成功删除信息
+        """
+        obj.pre_delete()
+
+        try:
+            if hasattr(obj, 'deleted_time'):
+                obj.deleted_time = tools.get_datetime_with_tz()
+                obj.save()
+            else:
+                obj.delete()
+        except Error as e:
+            msg = e.args[1]
+            raise DatabaseError(msg, self.model.__name__) from e
+
+        obj.post_delete()
+        return 'success to delete object'
+
+    def delete_obj_qs(self, *query_obj, **kwargs):
+        """
+        从模型中删除符合条件的所有对象，自动区分并进行软删除
+        :param query_obj: Q object, 查询对象
+        :param kwargs: dict, 过滤参数
+        :return: str, 成功删除信息
+        """
+        obj_qs = self.get_obj_qs(*query_obj, **kwargs)
+
+        for obj in obj_qs:
+            self.delete_obj(obj)
+
+        return 'success to delete object query set'
+
 
 

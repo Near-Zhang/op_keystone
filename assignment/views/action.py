@@ -78,24 +78,3 @@ class ActionsView(ResourceView):
 
         except CustomException as e:
             return self.exception_to_response(e)
-
-    def delete(self, request, uuid=None):
-        try:
-            # 非全局权限级别的请求，直接进行权限拒绝
-            if request.privilege_level != 1:
-                raise PermissionDenied()
-
-            # 若资源 uuid 不存在，发生路由参数异常，否则获取资源定位对象
-            if not uuid:
-                raise RoutingParamsError()
-            obj = self._model.get_obj(uuid=uuid)
-
-            # 对象删除
-            check_methods = ('pre_delete',)
-            deleted_obj = self._model.delete_obj(obj, check_methods=check_methods)
-
-            # 返回成功删除
-            return self.standard_response('succeed to delete %s' % deleted_obj.name)
-
-        except CustomException as e:
-            return self.exception_to_response(e)

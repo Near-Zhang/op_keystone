@@ -21,6 +21,32 @@ class Role(ResourceModel):
     enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
 
+    def pre_create(self):
+        """
+        创建前，检查 domain 是否存在，以及是否内置
+        """
+        super().pre_create()
+
+        if self.builtin:
+            self.domain = DAO('partition.models.Domain').get_obj(is_main=True).uuid
+        else:
+            DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
+        :return:
+        """
+        necessary = ['name']
+        extra = ['comment', 'enable']
+        senior_extra = ['domain', 'builtin']
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
+
     def pre_save(self):
         """
         保存前，检查 domain 是否存在，当角色为 builtin 时固定 domain 为 main domain

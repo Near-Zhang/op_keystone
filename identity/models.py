@@ -35,8 +35,68 @@ class User(ResourceModel):
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
 
     # 软删除字段
-    deleted_by = models.CharField(max_length=32, null=True, verbose_name='删除用户UUID')
     deleted_time = models.DateTimeField(null=True, verbose_name='删除时间')
+
+    def pre_create(self):
+        """
+        创建前，进行密码校验、字段检查
+        """
+        super().pre_create()
+        self.validate_password()
+
+        # 检查 domain 是否存在
+        domain_obj = DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+        # 检查 domain 中的 main user，不存在时自动创建；存在时自动不允许创建；存在多个时报错
+        main_user_count = DAO('identity.models.User').get_obj_qs(domain=self.domain, is_main=True).count()
+        if main_user_count < 1:
+            self.is_main = True
+        if main_user_count == 1 and self.is_main:
+            self.is_main = False
+        if main_user_count > 1:
+            raise DatabaseError('more than one main user of domain %s'
+                                % domain_obj.name, self.__class__.__name__)
+
+    def post_create(self):
+        """
+        创建后，创建对应的 behavior 对象
+        """
+        DAO('identity.models.UserBehavior').create_obj(user=self.uuid)
+
+    def pre_update(self):
+        """
+        更新前，进行 user 字段的检查
+        """
+        # 检查 domain 是否存在
+        domain_obj = DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+        # 检查 domain 中的 main user，不存在时拒绝除了新增 main user 的修改；存在时，自动禁止新增 main user 的修改，
+        # 非 main domain 自动不允许禁用 main user 修改，main domain 自动不允许禁用或取消 main user 的修改；
+        # 存在多个时报错
+        main_user_qs = DAO('identity.models.User').get_obj_qs(domain=self.domain, is_main=True)
+        main_user_count = main_user_qs.count()
+        if main_user_count < 1 and not self.is_main:
+                raise DatabaseError('there is no main user of domain %s'
+                                    % domain_obj.name, self.__class__.__name__)
+        if main_user_count == 1 :
+            if self.uuid != main_user_qs.first().uuid:
+                self.is_main = False
+            if self.uuid == main_user_qs.first().uuid:
+                self.enable = True
+                if domain_obj.is_main:
+                    self.is_main = True
+        if main_user_count > 1:
+            raise DatabaseError('more than one main user of domain %s'
+                                % domain_obj.name, self.__class__.__name__)
+
+    def pre_delete(self):
+        """
+        删除前，检查是否为主用户，删除对象的关联 group 和 role
+        """
+        if self.is_main:
+            raise DatabaseError('this is the main user', self.__class__.__name__)
+        DAO('identity.models.M2MUserGroup').delete_obj_qs(user=self.uuid)
+        DAO('identity.models.M2MUserRole').delete_obj_qs(user=self.uuid)
 
     def serialize(self):
         """
@@ -50,7 +110,7 @@ class User(ResourceModel):
             d['deleted_time'] = tools.datetime_to_humanized(d['deleted_time'])
 
         # 附加信息
-        d['behavior'] = UserBehavior.objects.get(user=self.uuid).serialize()
+        d['behavior'] = DAO('identity.models.UserBehavior').get_obj(user=self.uuid).serialize()
         return d
 
     def check_password(self, password):
@@ -65,8 +125,7 @@ class User(ResourceModel):
 
     def validate_password(self):
         """
-        进行密码合法校验，成功则进行加盐哈希并返回 True
-        :return: bool
+        进行密码合法校验，成功则进行加盐哈希
         """
         try:
             v_password(self.password, self)
@@ -75,31 +134,22 @@ class User(ResourceModel):
         else:
             self.password = tools.password_to_hash(self.password)
 
-    def pre_save(self):
+    @staticmethod
+    def get_field_opts(create=True):
         """
-        保存前，检查 domain 是否存在，且其中 main user 是否唯一
+        获取创建对象需要的字段列表
+        :return:
         """
-        domain_obj = DAO('partition.models.Domain').get_obj(uuid=self.domain)
-        main_user_qs = self.__class__.objects.filter(domain=self.domain, is_main=True)
+        necessary = ['username', 'password', 'name',
+                     'email', 'phone']
+        extra = ['qq', 'comment', 'enable']
+        senior_extra = ['domain', 'is_main']
 
-        if main_user_qs.count() < 1:
-            if not self.is_main:
-                raise DatabaseError('main user of domain %s is not existed' % domain_obj.name, self.__class__.__name__)
-        elif main_user_qs.count() > 1:
-            raise DatabaseError('more than one main user of domain %s' % domain_obj.name, self.__class__.__name__)
-        elif self.is_main and self.uuid != main_user_qs.first().uuid:
-            raise DatabaseError('main user of domain %s is already existed' % domain_obj.name, self.__class__.__name__)
-        elif domain_obj.is_main and not self.is_main and self.uuid == main_user_qs.first().uuid:
-            raise DatabaseError('this is main user of domain %s' % domain_obj.name, self.__class__.__name__)
-
-    def pre_delete(self):
-        """
-        删除前，检查是否为主用户，删除对象的对外关联
-        """
-        if self.is_main:
-            raise DatabaseError('this is the main user', self.__class__.__name__)
-        M2MUserGroup.objects.filter(user=self.uuid).delete()
-        M2MUserRole.objects.filter(user=self.uuid).delete()
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            necessary.remove('password')
+            return necessary + extra, senior_extra
 
 
 class UserBehavior(BaseModel):
@@ -144,21 +194,41 @@ class Group(ResourceModel):
     enable = models.BooleanField(default=True, verbose_name='是否可用')
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
 
-    def pre_save(self):
+    def pre_create(self):
         """
-        保存前，检查 domain 是否存在
-        :return:
+        创建前，检查 domain 是否存在
+        """
+        super().pre_create()
+        DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+    def pre_update(self):
+        """
+        更新前，检查 domain 是否存在
         """
         DAO('partition.models.Domain').get_obj(uuid=self.domain)
 
     def pre_delete(self):
         """
-        删除前，检查和删除对象的对外关联
+        删除前，检查是否存在关联的 user，删除关联的 role
+        """
+        if DAO('identity.models.M2MUserGroup').get_obj_qs(group=self.uuid).count() > 0:
+            raise DatabaseError('group are referenced by users', self.__class__.__name__)
+        DAO('identity.models.M2MGroupRole').delete_obj_qs(group=self.uuid)
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
         :return:
         """
-        if M2MUserGroup.objects.filter(group=self.uuid).count() > 0:
-            raise DatabaseError('group are referenced by users', self.__class__.__name__)
-        M2MGroupRole.objects.filter(group=self.uuid).delete()
+        necessary = ['name']
+        extra = ['enable', 'comment']
+        senior_extra = ['domain']
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
 
 
 class M2MUserGroup(BaseModel):
@@ -171,6 +241,15 @@ class M2MUserGroup(BaseModel):
     user = models.CharField(max_length=32, verbose_name='用户UUID')
     group = models.CharField(max_length=32, verbose_name='组UUID')
 
+    def pre_create(self):
+        """
+        创建前，检查 user 和 group 是否同属一个 domain
+        """
+        user_obj = DAO(User).get_obj(uuid = self.user)
+        group_obj = DAO(Group).get_obj(uuid = self.group)
+        if user_obj.domain != group_obj.domain:
+            raise DatabaseError('user and group is not in a common domain', self.__class__.__name__)
+
 
 class M2MUserRole(BaseModel):
 
@@ -182,6 +261,16 @@ class M2MUserRole(BaseModel):
     user = models.CharField(max_length=32, verbose_name='用户UUID')
     role = models.CharField(max_length=32, verbose_name='角色UUID')
 
+    def pre_create(self):
+        """
+        创建前，检查 user 和 role 是否同属一个 domain，或者 role 是内置
+        """
+        user_obj = DAO(User).get_obj(uuid = self.user)
+        role_obj = DAO('assignment.models.Role').get_obj(uuid = self.role)
+        if user_obj.domain != role_obj.domain and not role_obj.builtin:
+            raise DatabaseError('user and role is not in a common domain, and role is not builtin',
+                                self.__class__.__name__)
+
 
 class M2MGroupRole(BaseModel):
 
@@ -192,3 +281,13 @@ class M2MGroupRole(BaseModel):
 
     group = models.CharField(max_length=32, verbose_name='用户组UUID')
     role = models.CharField(max_length=32, verbose_name='角色UUID')
+
+    def pre_create(self):
+        """
+        创建前，检查 group 和 role 是否同属一个 domain，或者 role 是内置
+        """
+        group_obj = DAO(Group).get_obj(uuid = self.group)
+        role_obj = DAO('assignment.models.Role').get_obj(uuid = self.role)
+        if group_obj.domain != role_obj.domain and not role_obj.builtin:
+            raise DatabaseError('group and role is not in a common domain, and role is not builtin',
+                                self.__class__.__name__)

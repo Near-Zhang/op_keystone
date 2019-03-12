@@ -21,6 +21,44 @@ class Domain(ResourceModel):
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注信息')
 
+    def pre_create(self):
+        """
+        创建前，检查是否为 main domain 的存在，不存在则自动创建，存在自动阻止创建，存在多个则报错
+        """
+        super().pre_create()
+
+        main_domain_count = DAO('partition.models.Domain').get_obj_qs(is_main=True).count()
+        if main_domain_count < 1:
+            self.is_main = True
+        if main_domain_count == 1:
+            self.domain = False
+        if main_domain_count > 1:
+            raise DatabaseError('more than one main domain', self.__class__.__name__)
+
+    def post_update(self):
+        """
+        更新前，检查是否为 main domain 的存在
+        :return:
+        """
+        main_domain_count = DAO('partition.models.Domain').get_obj_qs(is_main=True).count()
+        if main_domain_count < 1:
+            raise DatabaseError('there is no main domain', self.__class__.__name__)
+        if main_domain_count > 1:
+            raise DatabaseError('more than one main domain', self.__class__.__name__)
+
+    def pre_delete(self):
+        """
+        删除前，检查是否为 main 对象，删除对象的对外关联
+        :return:
+        """
+        if self.is_main:
+            raise DatabaseError('this is main domain', self.__class__.__name__)
+        DAO('partition.models.Project').delete_obj_qs(domain=self.uuid)
+        DAO('identity.models.User').delete_obj_qs(domain=self.uuid)
+        DAO('identity.models.Group').delete_obj_qs(domain=self.uuid)
+        DAO('assignment.models.Role').delete_obj_qs(domain=self.uuid)
+        DAO('assignment.models.Policy').delete_obj_qs(domain=self.uuid)
+
     def serialize(self):
         """
         对象序列化
@@ -36,26 +74,20 @@ class Domain(ResourceModel):
         d['custom_policy_count'] = DAO('assignment.models.Policy').get_obj_qs(domain=self.uuid, builtin=False).count()
         return d
 
-    def pre_save(self):
+    @staticmethod
+    def get_field_opts(create=True):
         """
-        保存前，检查是否为 main domain 的存在，和阻止创建 main domain
+        获取创建对象需要的字段列表
         :return:
         """
-        main_domain_qs = self.__class__.objects.filter(is_main=True)
-        if main_domain_qs.count() < 1:
-            raise DatabaseError('the main domain is not existed', self.__class__.__name__)
-        elif main_domain_qs.count() > 1:
-            raise DatabaseError('more than one main domain', self.__class__.__name__)
-        elif self.is_main and self.uuid != main_domain_qs.first().uuid:
-            raise DatabaseError('the main domain is already existed ', self.__class__.__name__)
+        necessary = ['name', 'company', 'agent']
+        extra = ['enable', 'comment']
+        senior_extra = []
 
-    def pre_delete(self):
-        """
-        删除前，检查和删除对象的对外关联
-        :return:
-        """
-        if self.is_main:
-            raise DatabaseError('this is main domain', self.__class__.__name__)
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
 
 
 class Project(ResourceModel):
@@ -74,9 +106,30 @@ class Project(ResourceModel):
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注')
 
-    def pre_save(self):
+    def pre_create(self):
         """
-        保存前，检查 domain 是否存在
-        :return:
+        创建前，检查 domain 是否存在
+        """
+        super().pre_create()
+        DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+    def pre_update(self):
+        """
+        更新前，检查 domain 是否存在
         """
         DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
+        :return:
+        """
+        necessary = ['name']
+        extra = ['enable', 'comment']
+        senior_extra = ['domain']
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra

@@ -1,8 +1,8 @@
-from django.urls import path
+from django.urls import re_path
 from .views import *
 
 
 urlpatterns = [
-    path(r'projects/', ProjectsView.as_view()),
-    path(r'domains/', DomainsView.as_view())
+    re_path(r'^projects/((?P<uuid>\w+)/)?$', ProjectsView.as_view()),
+    re_path(r'^domains/((?P<uuid>\w+)/)?$', DomainsView.as_view())
 ]

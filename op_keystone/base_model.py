@@ -9,21 +9,39 @@ class BaseModel(models.Model):
         verbose_name = '基础抽象模型'
         abstract = True
 
-    def _pre_create(self):
+    def pre_create(self):
         """
         创建前的检查和操作
         """
         pass
 
-    def _pre_save(self):
+    def post_create(self):
+        """
+        创建后的检查和操作
+        """
+        pass
+
+    def pre_update(self):
         """
         更新前的检查和操作
         """
         pass
 
-    def _pre_delete(self):
+    def post_update(self):
+        """
+        更新后的检查和操作
+        """
+        pass
+
+    def pre_delete(self):
         """
          删除前的检查和操作
+        """
+        pass
+
+    def post_delete(self):
+        """
+         删除后的检查和操作
         """
         pass
 
@@ -54,7 +72,7 @@ class ResourceModel(BaseModel):
     updated_by = models.CharField(max_length=32, null=True, verbose_name='更新用户UUID')
     updated_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 
-    def _pre_create(self):
+    def pre_create(self):
         """
         创建前的检查和操作，创建 uuid
         """

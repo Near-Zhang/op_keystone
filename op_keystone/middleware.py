@@ -76,12 +76,12 @@ class AuthMiddleware(MiddlewareMixin):
         domain = self.domain_model.get_obj(uuid=user.domain)
         if domain.is_main:
             if user.is_main:
-                request.user_level = 1
+                user.level = 1
                 return
             else:
-                request.user_level = 2
+                user.level = 2
         else:
-            request.user_level = 3
+            user.level = 3
 
         # 开始鉴权
         try:
