@@ -13,5 +13,6 @@ urlpatterns = [
     path(r'logout/', LogoutView.as_view()),
     path(r'refresh/', RefreshView.as_view()),
     path(r'password/', PasswordView.as_view()),
-    path(r'captcha/', Captcha.as_view())
+    path(r'captcha/', Captcha.as_view()),
+    path(r'auth/', Auth.as_view())
 ]

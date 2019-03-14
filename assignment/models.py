@@ -66,6 +66,10 @@ class Role(ResourceModel):
         else:
             return necessary + extra, senior_extra
 
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'domain'] + super().get_default_query_keys()
+
 
 class Policy(ResourceModel):
 
@@ -135,6 +139,11 @@ class Policy(ResourceModel):
         else:
             return necessary + extra, senior_extra
 
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'action', 'effect',
+                'domain'] + super().get_default_query_keys()
+
 
 class Action(ResourceModel):
 
@@ -188,6 +197,11 @@ class Action(ResourceModel):
             return necessary, extra, senior_extra
         else:
             return necessary + extra, senior_extra
+
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'service', 'url',
+                'method'] + super().get_default_query_keys()
 
 
 class M2MRolePolicy(BaseModel):

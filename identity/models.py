@@ -151,6 +151,11 @@ class User(ResourceModel):
             necessary.remove('password')
             return necessary + extra, senior_extra
 
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['username', 'name', 'email',
+                'phone', 'domain'] + super().get_default_query_keys()
+
 
 class UserBehavior(BaseModel):
 
@@ -229,6 +234,10 @@ class Group(ResourceModel):
             return necessary, extra, senior_extra
         else:
             return necessary + extra, senior_extra
+
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'domain'] + super().get_default_query_keys()
 
 
 class M2MUserGroup(BaseModel):

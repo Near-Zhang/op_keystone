@@ -89,6 +89,10 @@ class Domain(ResourceModel):
         else:
             return necessary + extra, senior_extra
 
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'company', 'agent'] + super().get_default_query_keys()
+
 
 class Project(ResourceModel):
 
@@ -133,3 +137,7 @@ class Project(ResourceModel):
             return necessary, extra, senior_extra
         else:
             return necessary + extra, senior_extra
+
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'domain'] + super().get_default_query_keys()

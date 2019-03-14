@@ -159,7 +159,7 @@ class ResourceView(BaseView):
 
             # 查询对象生成
             query_str = extra_opts_dict.pop('query', None)
-            query_obj = self._model.parsing_query_str(query_str)
+            query_obj = self._model.parsing_query_str(query_str, url_params=True)
 
             # 当前页数据获取
             total_list = self._model.get_dict_list(query_obj)
@@ -271,7 +271,7 @@ class M2MRelationView(BaseView):
 
             # 查询对象生成
             query_str = extra_opts_dict.pop('query', None)
-            query_obj = self._to_model.parsing_query_str(query_str)
+            query_obj = self._to_model.parsing_query_str(query_str, url_params=True)
 
             # 获取目的对象列表，并获取当前页数据
             to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})

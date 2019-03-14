@@ -6,6 +6,7 @@ from django.conf import settings
 from django.http.response import HttpResponse
 from io import BytesIO
 from django.core.cache import cache
+from op_keystone.middleware import AuthTools
 
 
 class LoginView(BaseView):
@@ -98,9 +99,9 @@ class LoginView(BaseView):
 
                 # 获取用户 access_token 对象，不存在新建，存在则更新
                 try:
-                    access_token_obj = self.token_model.get_obj(user=user.uuid, type=0)
+                    access_token_obj = self.token_model.get_obj(carrier=user.uuid, type=0)
                 except CustomException:
-                    self.token_model.create_obj(user=user.uuid, token=access_token,
+                    self.token_model.create_obj(carrier=user.uuid, token=access_token,
                                                 expire_date=access_expire_date, type=0)
                 else:
                     self.token_model.update_obj(access_token_obj, token=access_token,
@@ -108,9 +109,9 @@ class LoginView(BaseView):
 
                 # 获取用户 fresh_token 对象，不存在新建，存在则更新
                 try:
-                    refresh_token_obj = self.token_model.get_obj(user=user.uuid, type=1)
+                    refresh_token_obj = self.token_model.get_obj(carrier=user.uuid, type=1)
                 except CustomException:
-                    self.token_model.create_obj(user=user.uuid, token=refresh_token,
+                    self.token_model.create_obj(carrier=user.uuid, token=refresh_token,
                                                 expire_date=refresh_expire_date, type=1)
                 else:
                     self.token_model.update_obj(refresh_token_obj, token=refresh_token,
@@ -173,7 +174,7 @@ class RefreshView(BaseView):
             self.token_model.update_obj(refresh_token_obj, expire_date=refresh_expire_date)
 
             # 获取 access_token，并刷新过期时间
-            access_token_obj = self.token_model.get_obj(user=refresh_token_obj.user, type=0)
+            access_token_obj = self.token_model.get_obj(carrier=refresh_token_obj.carrier, type=0)
             access_expire_date = tools.get_datetime_with_tz(minutes=settings.ACCESS_TOKEN_VALID_TIME)
             self.token_model.update_obj(access_token_obj, expire_date=access_expire_date)
 
@@ -199,8 +200,8 @@ class LogoutView(BaseView):
         try:
             # 通过用户获取 token 对象
             user = request.user
-            access_token_ins = self.token_model.get_obj(user=user.uuid, type=0)
-            refresh__token_ins = self.token_model.get_obj(user=user.uuid, type=1)
+            access_token_ins = self.token_model.get_obj(carrier=user.uuid, type=0)
+            refresh__token_ins = self.token_model.get_obj(carrier=user.uuid, type=1)
 
             # 更新 token 对象
             expire_date = tools.get_datetime_with_tz()
@@ -241,7 +242,7 @@ class PasswordView(BaseView):
 
             # 获取和失效 token 对象
             user = request.user
-            token_obj_qs = self.token_model.get_obj_qs(user=user.uuid)
+            token_obj_qs = self.token_model.get_obj_qs(carrier=user.uuid)
             expire_date = tools.get_datetime_with_tz()
             for obj in token_obj_qs:
                 self.token_model.update_obj(obj, expire_date=expire_date)
@@ -259,22 +260,64 @@ class Captcha(BaseView):
     """
 
     def get(self, request):
-        # 参数提取
-        necessary_opts = ['captcha-key']
-        request_params = self.get_params_dict(request)
-        necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+        try:
+            # 参数提取
+            necessary_opts = ['captcha-key']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-        # 生成验证码，以及保存
-        captcha_img, captcha_value = tools.generate_captcha_img()
-        bytes_mem = BytesIO()
-        captcha_img.save(bytes_mem, 'png')
+            # 生成验证码，以及保存
+            captcha_img, captcha_value = tools.generate_captcha_img()
+            bytes_mem = BytesIO()
+            captcha_img.save(bytes_mem, 'png')
 
-        # 验证码信息存入缓存
-        captcha_key = necessary_opts_dict['captcha_key']
-        cache.set(captcha_key, captcha_value)
+            # 验证码信息存入缓存
+            captcha_key = necessary_opts_dict['captcha_key']
+            cache.set(captcha_key, captcha_value)
 
-        # 返回图片响应
-        return HttpResponse(bytes_mem.getvalue(), content_type='image/png')
+            # 返回图片响应
+            return HttpResponse(bytes_mem.getvalue(), content_type='image/png')
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class Auth(BaseView):
+    """
+    用于提供接口给服务进行请求鉴权
+    """
+
+    _auth_tools = AuthTools()
+
+    _token_model = DAO('credence.models.Token')
+
+    def post(self, request):
+        try:
+            if not request.service:
+                raise PermissionDenied()
+
+            # 参数提取
+            necessary_opts = ['token', 'url', 'method', 'routing_params']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 用户获取
+            token_obj = self._token_model.get_obj(token=necessary_opts_dict.pop('token'))
+            user_obj = self._auth_tools.get_user_of_token(token_obj)
+
+            # 获取 user 对象关联的 policy 列表，policy 判定处理后获取通过标记和条件
+            policy_obj_qs = self._auth_tools.get_policies_of_user(user_obj)
+            access, allow_condition_list, deny_condition_list = self._auth_tools.judge_policies(
+                policy_obj_qs, request.service.uuid, necessary_opts_dict)
+
+            return self.standard_response({
+                'access': access,
+                'allow_condition_list': allow_condition_list,
+                'deny_condition_list': deny_condition_list
+            })
+
+        except CustomException as e:
+            return self.exception_to_response(e)
 
 
 

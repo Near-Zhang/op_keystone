@@ -1,8 +1,8 @@
-from django.urls import path
+from django.urls import re_path
 from .views import *
 
 
 urlpatterns = [
-    path(r'services/', ServicesView.as_view()),
-    path(r'endpoints/', EndpointView.as_view())
+    re_path(r'^services/((?P<uuid>\w+)/)?$', ServicesView.as_view()),
+    re_path(r'^endpoints/((?P<uuid>\w+)/)?$', EndpointView.as_view())
 ]

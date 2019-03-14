@@ -1,6 +1,7 @@
 from op_keystone.base_model import ResourceModel
 from django.db import models
 from utils.dao import DAO
+from utils import tools
 
 
 class Service(ResourceModel):
@@ -17,12 +18,40 @@ class Service(ResourceModel):
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注信息')
 
+    def post_create(self):
+        """
+        创建后，生成一个永久服务 token
+        """
+        now = tools.get_datetime_with_tz()
+        access_token = tools.generate_mapping_uuid(self.uuid, tools.datetime_to_humanized(now))
+        DAO('credence.models.Token').create_obj(carrier=self.uuid, token=access_token,
+                                                expire_date=now, type=2)
+
     def pre_delete(self):
         """
         删除前，检查对象的对外关联
         :return:
         """
         DAO(Endpoint).delete_obj_qs(service=self.uuid)
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
+        :return:
+        """
+        necessary = ['name', 'function']
+        extra = ['enable', 'comment']
+        senior_extra = []
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
+
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'function'] + super().get_default_query_keys()
 
 
 class Endpoint(ResourceModel):
@@ -53,3 +82,23 @@ class Endpoint(ResourceModel):
         更新前，检查 service 是否存在
         """
         DAO(Service).get_obj(uuid=self.service)
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
+        :return:
+        """
+        necessary = ['ip', 'port', 'service']
+        extra = ['enable', 'comment']
+        senior_extra = []
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
+
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['ip', 'port', 'service'] + super().get_default_query_keys()
+

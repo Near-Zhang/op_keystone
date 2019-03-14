@@ -35,6 +35,16 @@ class DAO:
         :return:
         """
         self.user = request.user
+        if getattr(request, 'condition_tuple', None):
+            for condition in request.condition_tuple[1]:
+                sub_q = self.parsing_query_str(condition)
+                self.query_obj &= ~sub_q
+
+            allow_q = Q()
+            for condition in request.condition_tuple[0]:
+                sub_q = self.parsing_query_str(condition)
+                allow_q |= sub_q
+            self.query_obj &= allow_q
 
         # 单个域级别需要设置查询限制
         if self.user.level == 3:
@@ -168,45 +178,57 @@ class DAO:
             if self.model.get_field('builtin') and field_opts['builtin']:
                 raise PermissionDenied()
 
-
         return field_opts
 
-    @staticmethod
-    def parsing_query_str(query_str):
+    def parsing_query_str(self, query_str, url_params=False):
         """
         解析查询字符串为查询对象
         :param query_str: str, 查询字符串
+        :param url_params: bool, 是否由 url 参数传递
         :return: Q object
         """
         q = Q()
         if not query_str:
             return q
+
         query_list = query_str.split(',')
-        for sub_query in query_list:
-            key = 'name__startswith'
-            sub_query_list = sub_query.split(':')
-            if len(sub_query_list) > 1:
-                key, value_str = sub_query_list
-                key += '__startswith'
+        for sub_query_str in query_list:
+            if ':' not in sub_query_str:
+                if url_params:
+                    sub_q = Q()
+                    for key in getattr(self.model, 'get_default_query_keys')():
+                        value_list = sub_query_str.split('|')
+                        inside_q = Q()
+                        if url_params:
+                            key += '__startswith'
+                        for value in value_list:
+                            inside_q |= Q(**{key: value})
+                        sub_q |= inside_q
+                else:
+                    continue
             else:
-                value_str = sub_query_list[0]
-
-            value_list = value_str.split('|')
-            sub_q = Q()
-            for value in value_list:
-                sub_q = sub_q | Q(**{key: value})
-
-            q = q & sub_q
+                key, value_str = sub_query_str.split(':')
+                if ('__' in key and not self.model.get_field(key.split('__')[0])) or \
+                    ('__' not in key and not self.model.get_field(key)):
+                    continue
+                value_list = value_str.split('|')
+                sub_q = Q()
+                if url_params:
+                    key += '__startswith'
+                for value in value_list:
+                    sub_q |= Q(**{key: value})
+            q &= sub_q
         return q
 
-    def get_obj(self, **kwargs):
+    def get_obj(self, *query_obj, **kwargs):
         """
         从模型中过滤并获取单个对象
+        :param query_obj: Q object, 查询对象
         :param kwargs: 过滤参数
         :return: model object
         """
         try:
-            return self.model.objects.get(self.query_obj, **kwargs)
+            return self.model.objects.get(*query_obj, self.query_obj, **kwargs)
         except ObjectDoesNotExist as e:
             raise ObjectNotExist(self.model.__name__) from e
 

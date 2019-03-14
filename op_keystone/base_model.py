@@ -91,3 +91,7 @@ class ResourceModel(BaseModel):
             if not d[i] is None:
                 d[i] = tools.datetime_to_humanized(d[i])
         return d
+
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['uuid']
