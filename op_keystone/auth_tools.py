@@ -1,5 +1,4 @@
 import re
-from django.db.models import Q
 from op_keystone.exceptions import CustomException
 from utils import tools
 from utils.dao import DAO
@@ -35,11 +34,23 @@ class AuthTools:
             raise CustomException()
 
         # 获取 user 对象并返回
-        user = self._user_model.get_obj(uuid=token_obj.carrier)
-        domain = self._domain_model.get_obj(uuid=user.domain)
-        if not domain.enable or not user.enable:
+        user_obj = self._user_model.get_obj(uuid=token_obj.carrier)
+        domain_obj = self._domain_model.get_obj(uuid=user_obj.domain)
+        if not domain_obj.enable or not user_obj.enable:
             raise CustomException()
-        return user
+
+        # 根据 user 和 domain 是否为主，判定用户级别，并设置到请求对象中
+        # 用户级别对权限的拒绝限制优先于策略， 级别对应：
+        # 1 -> 全域    2 -> 跨域(除了主域)   3 -> 单个域
+        if domain_obj.is_main:
+            if user_obj.is_main:
+                user_obj.level = 1
+            else:
+                user_obj.level = 2
+        else:
+            user_obj.level = 3
+
+        return user_obj
 
     def get_policies_of_user(self, user_obj):
         """
@@ -104,7 +115,7 @@ class AuthTools:
                 continue
 
             # 请求 res 不匹配期望 res，退出当次循环
-            res = request_info['routing_params_dict'].get('uuid')
+            res = request_info['routing_params'].get('uuid')
             exp_res_list = policy_obj.res.split(',')
 
             if policy_obj.effect == 'allow':

@@ -53,7 +53,7 @@ class AuthMiddleware(MiddlewareMixin):
             })
 
         # 处理鉴权响应
-        if response['data']['access']:
+        if not response['data']['access']:
             return JsonResponse({
                 'code': 403,
                 'data': None,

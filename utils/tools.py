@@ -1,6 +1,7 @@
 from pytz import timezone
 from datetime import datetime, timedelta
 from django.conf import settings
+from op_keystone.exceptions import *
 from importlib import import_module
 import hashlib
 import json
@@ -11,6 +12,8 @@ import string
 import re
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import random
+import requests
+from requests.exceptions import RequestException
 
 
 def get_datetime_with_tz(datetime_obj=None, **kwargs):
@@ -174,6 +177,31 @@ def judge_private_ip(ip):
     return private
 
 
+def request_external_api(method, url, data=None, json_body=False):
+    """
+    请求外部接口
+    :param method: str, 请求方法
+    :param url: str, 请求 url
+    :param data: dict, 请求数据
+    :param json_body: body 是否以 json 而非表单形式发送
+    :return: request response object
+    """
+    try:
+        request_func = getattr(requests, method)
+        if method == 'get':
+            response = request_func(url, params=data).json()
+        else:
+            if json_body:
+                response = request_func(url, json=data).json()
+            else:
+                response = request_func(url, data=data).json()
+
+        return response
+
+    except RequestException:
+        raise RequestBackendError(method, url)
+
+
 def ip_to_location(ip):
     """
     解析 IP 为其对应的物理位置
@@ -275,3 +303,52 @@ def generate_captcha_img(size=(120, 40), length=4, draw_lines=True,
     img = img.filter(ImageFilter.EDGE_ENHANCE_MORE)
 
     return img, captcha_str
+
+
+def send_phone_captcha(phone, expire=60):
+    """
+    使用腾讯短信接口，发送手机验证码
+    :param phone: str, 手机号码
+    :param expire: int, 过期秒数
+    :return: str, 验证码
+    """
+    # 定义短信接口参数
+    digits_number = string.digits
+    sdk_app_id = settings.TX_SMS_APP_ID
+    app_key = settings.TX_SMS_APP_KEY
+    random_str = ''.join(random.sample(digits_number, 4))
+    now_stamp = time.time().__trunc__()
+    captcha_str = ''.join(random.sample(digits_number, 6))
+
+    # 请求的相关信息定义
+    method = 'post'
+    url = 'https://yun.tim.qq.com/v5/tlssmssvr/sendsms?sdkappid=%s&random=%s' \
+          % (sdk_app_id, random_str)
+    data = {
+        'params': [
+            captcha_str,
+            expire
+        ],
+        'sign': "广州君海",
+        'tel': {
+            'mobile': phone,
+            'nationcode': '86'
+        },
+        'time': now_stamp,
+        'tpl_id': 294623
+    }
+    h = hashlib.sha256()
+    abstract = 'appkey=%s&random=%s&time=%s&mobile=%s' % (app_key, random_str, now_stamp, phone)
+    h.update(bytes(abstract, encoding='utf8'))
+    data['sig'] = h.hexdigest()
+
+    # 请求短信接口并检查发送结果，返回验证码
+    response = request_external_api(method, url, data, json_body=True)
+    if response.get('result') != 0:
+        raise ResponseBackendError(method, url, response.get('errmsg'))
+    return captcha_str
+
+
+def send_email_captcha(email, expire=60):
+
+    pass

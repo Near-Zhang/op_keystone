@@ -14,5 +14,7 @@ urlpatterns = [
     path(r'refresh/', RefreshView.as_view()),
     path(r'password/', PasswordView.as_view()),
     path(r'captcha/', Captcha.as_view()),
+    path(r'phone-captcha/', PhoneCaptcha.as_view()),
+    path(r'email-captcha/', PhoneCaptcha.as_view()),
     path(r'auth/', Auth.as_view())
 ]

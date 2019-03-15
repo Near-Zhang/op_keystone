@@ -59,29 +59,19 @@ class AuthMiddleware(MiddlewareMixin):
         if request_route in settings.POLICY_WHITE_LIST:
             return
 
-        # 根据 user 和 domain 是否为主，判定用户级别，并设置到请求对象中
-        # 用户级别对权限的拒绝限制优先于策略， 级别对应：
-        # 1 -> 全域    2 -> 跨域(除了主域)   3 -> 单个域
-        # 用户级别为全域时，忽略鉴权
-        user_obj = request.user
-        domain = self._domain_model.get_obj(uuid=user_obj.domain)
-        if domain.is_main:
-            if user_obj.is_main:
-                user_obj.level = 1
-                return
-            else:
-                user_obj.level = 2
-        else:
-            user_obj.level = 3
-
         # 开始鉴权
         try:
+            user_obj = request.user
+            # 用户级别为全域时，忽略鉴权
+            if user_obj.level == 1:
+                return
+
             # 整合服务和请求信息
             service_uuid = self._service_model.get_obj(name='keystone').uuid
             request_info = {
                 'url': request.path,
                 'method': request.method.lower(),
-                'routing_params_dict': callback_kwargs
+                'routing_params': callback_kwargs
             }
 
             # 获取 user 对象关联的 policy 列表，policy 判定处理后获取条件

@@ -123,9 +123,11 @@ REFRESH_TOKEN_VALID_TIME = 2 * ACCESS_TOKEN_VALID_TIME
 ROUTE_WHITE_LIST = [
     ('/identity/login/', 'post'),
     ('/identity/refresh/', 'post'),
-    ('/identity/captcha/', 'get')
+    ('/identity/captcha/', 'get'),
+    ('/identity/phone-captcha/', 'post')
 ]
 
 # auth policy white list
 POLICY_WHITE_LIST = [
+    ('/identity/logout/', 'post'),
 ]

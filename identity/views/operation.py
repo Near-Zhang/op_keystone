@@ -14,63 +14,72 @@ class LoginView(BaseView):
     用户登陆，包括用户名、手机、邮箱三种登陆类型
     """
 
-    domain_model = DAO('partition.models.Domain')
-    user_model = DAO('identity.models.User')
-    user_behavior_model = DAO('identity.models.UserBehavior')
-    token_model = DAO('credence.models.Token')
+    _domain_model = DAO('partition.models.Domain')
+    _user_model = DAO('identity.models.User')
+    _behavior_model = DAO('identity.models.UserBehavior')
+    _token_model = DAO('credence.models.Token')
 
     def post(self, request):
         try:
-            # 验证码参数提取
-            captcha_opts = [
+            # 参数提取
+            necessary_opts = [
                 'captcha_key',
-                'captcha_value'
-            ]
-            request_params = self.get_params_dict(request)
-            captcha_opts_dict = self.extract_opts(request_params, captcha_opts)
-
-            # 验证码校验
-            captcha_value = captcha_opts_dict['captcha_value'].lower()
-            captcha_value_exp = cache.get(captcha_opts_dict['captcha_key']).lower()
-            if captcha_value != captcha_value_exp:
-                raise CaptchaError()
-
-            # 类型参数提取
-            type_opts = [
+                'captcha_value',
                 {
                     'key': 'type',
                     'white': True,
-                    'values': ['phone', 'email', 'username']
+                    'values': ['password', 'phone']
                 }
             ]
-            type_opts_dict = self.extract_opts(request_params, type_opts)
-
-            # 根据类型确定登陆参数
-            login_type = type_opts_dict['type']
-            if login_type == 'phone':
-                necessary_opts = ['phone', 'password']
-            elif login_type == 'email':
-                necessary_opts = ['email', 'password']
-            else:
-                necessary_opts = ['domain', 'username', 'password']
-
-            # 登陆参数提取
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            # domain 参数额外处理
-            if login_type == 'username':
-                domain_name = necessary_opts_dict.pop('domain')
-                domain = self.domain_model.get_obj(name=domain_name)
-                necessary_opts_dict['domain'] = domain.uuid
+            # 验证码校验
+            captcha_value = necessary_opts_dict.pop('captcha_value').lower()
+            captcha_value_exp = cache.get(necessary_opts_dict.pop('captcha_key')).lower()
+            if captcha_value != captcha_value_exp:
+                raise CaptchaError()
 
-            # 取出密码
-            password = necessary_opts_dict.pop('password')
+            # 根据类型确定登陆参数，并提取
+            login_type = necessary_opts_dict['type']
+            if login_type == 'password':
+                login_opts = ['account', 'password']
+            else:
+                login_opts = ['phone', 'phone_captcha']
+            login_opts_dict = self.extract_opts(request_params, login_opts)
 
-            # 获取用户并校验密码，然后进行登陆成功的后续操作
             try:
-                user = self.user_model.get_obj(**necessary_opts_dict)
-                user.check_password(password)
+                # 密码登录, 账户参数处理并校验密码
+                if login_type == 'password':
+                    account = login_opts_dict['account']
+                    if account.isdigit():
+                        user_obj = self._user_model.get_obj(phone=account)
+                    elif '@' in account:
+                        try:
+                            user_obj = self._user_model.get_obj(email=account)
+                        except ObjectNotExist:
+                            username, domain_name = account.split('@')
+                            domain_uuid = self._domain_model.get_obj(name=domain_name).uuid
+                            user_obj = self._user_model.get_obj(username=username, domain=domain_uuid)
+                    else:
+                        raise CustomException()
+
+                    password = login_opts_dict['password']
+                    user_obj.check_password(password)
+
+                # 手机验证码登录
+                else:
+                    phone = login_opts_dict['phone']
+                    phone_captcha = login_opts_dict['phone_captcha']
+                    phone_captcha_exp = cache.get(phone)
+                    if phone_captcha != phone_captcha_exp:
+                        raise CustomException()
+                    user_obj = self._user_model.get_obj(phone=phone)
+
+                # 用户有效性校验
+                domain_obj = self._domain_model.get_obj(uuid=user_obj.domain)
+                if not user_obj.enable or not domain_obj.enable:
+                    raise UserInvalid()
 
                 # 更新用户行为
                 now = tools.get_datetime_with_tz()
@@ -79,48 +88,49 @@ class LoginView(BaseView):
                     location = '内部网络'
                 else:
                     location = tools.ip_to_location(remote_ip)
-                behavior_obj = self.user_behavior_model.get_obj(user=user.uuid)
+                behavior_obj = self._behavior_model.get_obj(user=user_obj.uuid)
                 behavior_dict = {
+                    'last_type': login_type,
                     'last_time': now,
                     'last_ip': remote_ip,
                     'last_location': location
                 }
-                self.user_behavior_model.update_obj(behavior_obj, **behavior_dict)
+                self._behavior_model.update_obj(behavior_obj, **behavior_dict)
 
                 # 生成 access_token 和 access_expire_date
-                access_mapping_str = 'access' + user.username + tools.datetime_to_humanized(now)
-                access_token = tools.generate_mapping_uuid(user.domain, access_mapping_str)
+                access_mapping_str = 'access' + user_obj.username + tools.datetime_to_humanized(now)
+                access_token = tools.generate_mapping_uuid(user_obj.domain, access_mapping_str)
                 access_expire_date = tools.get_datetime_with_tz(minutes=settings.ACCESS_TOKEN_VALID_TIME)
 
                 # 生成 refresh_token 和 refresh_expire_date
-                refresh_mapping_str = 'token' + user.username + tools.datetime_to_humanized(now)
-                refresh_token = tools.generate_mapping_uuid(user.domain, refresh_mapping_str)
+                refresh_mapping_str = 'token' + user_obj.username + tools.datetime_to_humanized(now)
+                refresh_token = tools.generate_mapping_uuid(user_obj.domain, refresh_mapping_str)
                 refresh_expire_date = tools.get_datetime_with_tz(minutes=settings.REFRESH_TOKEN_VALID_TIME)
 
                 # 获取用户 access_token 对象，不存在新建，存在则更新
                 try:
-                    access_token_obj = self.token_model.get_obj(carrier=user.uuid, type=0)
+                    access_token_obj = self._token_model.get_obj(carrier=user_obj.uuid, type=0)
                 except CustomException:
-                    self.token_model.create_obj(carrier=user.uuid, token=access_token,
+                    self._token_model.create_obj(carrier=user_obj.uuid, token=access_token,
                                                 expire_date=access_expire_date, type=0)
                 else:
-                    self.token_model.update_obj(access_token_obj, token=access_token,
+                    self._token_model.update_obj(access_token_obj, token=access_token,
                                                 expire_date=access_expire_date)
 
                 # 获取用户 fresh_token 对象，不存在新建，存在则更新
                 try:
-                    refresh_token_obj = self.token_model.get_obj(carrier=user.uuid, type=1)
+                    refresh_token_obj = self._token_model.get_obj(carrier=user_obj.uuid, type=1)
                 except CustomException:
-                    self.token_model.create_obj(carrier=user.uuid, token=refresh_token,
+                    self._token_model.create_obj(carrier=user_obj.uuid, token=refresh_token,
                                                 expire_date=refresh_expire_date, type=1)
                 else:
-                    self.token_model.update_obj(refresh_token_obj, token=refresh_token,
+                    self._token_model.update_obj(refresh_token_obj, token=refresh_token,
                                                 expire_date=refresh_expire_date)
 
                 # 获取用户的权限级别
-                domain = self.domain_model.get_obj(uuid=user.domain)
+                domain = self._domain_model.get_obj(uuid=user_obj.domain)
                 if domain.is_main:
-                    if user.is_main:
+                    if user_obj.is_main:
                         privilege_level = 1
                     else:
                         privilege_level = 2
@@ -133,8 +143,8 @@ class LoginView(BaseView):
                     'access_expire_date': tools.datetime_to_timestamp(access_expire_date),
                     'refresh_token': refresh_token,
                     'refresh_expire_date': tools.datetime_to_timestamp(refresh_expire_date),
-                    "uuid": user.uuid,
-                    "name": user.name,
+                    "uuid": user_obj.uuid,
+                    "name": user_obj.name,
                     "privilege_level": privilege_level
                 }
                 return self.standard_response(data)
@@ -194,19 +204,19 @@ class LogoutView(BaseView):
     用户登出
     """
 
-    token_model = DAO('credence.models.Token')
+    _token_model = DAO('credence.models.Token')
 
     def post(self, request):
         try:
             # 通过用户获取 token 对象
             user = request.user
-            access_token_ins = self.token_model.get_obj(carrier=user.uuid, type=0)
-            refresh__token_ins = self.token_model.get_obj(carrier=user.uuid, type=1)
+            access_token_ins = self._token_model.get_obj(carrier=user.uuid, type=0)
+            refresh__token_ins = self._token_model.get_obj(carrier=user.uuid, type=1)
 
             # 更新 token 对象
             expire_date = tools.get_datetime_with_tz()
-            self.token_model.update_obj(access_token_ins, expire_date=expire_date)
-            self.token_model.update_obj(refresh__token_ins, expire_date=expire_date)
+            self._token_model.update_obj(access_token_ins, expire_date=expire_date)
+            self._token_model.update_obj(refresh__token_ins, expire_date=expire_date)
 
             # 返回登出成功
             return self.standard_response('user %s succeed to logout' % user.name)
@@ -282,6 +292,66 @@ class Captcha(BaseView):
             return self.exception_to_response(e)
 
 
+class PhoneCaptcha(BaseView):
+    """
+    发送手机验证码
+    """
+
+    _domain_model = DAO('partition.models.Domain')
+    _user_model = DAO('identity.models.User')
+
+    def post(self, request):
+        try:
+            # 参数提取
+            necessary_opts = [
+                'captcha_key',
+                'captcha_value',
+                'phone'
+            ]
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 验证码校验
+            captcha_value = necessary_opts_dict.pop('captcha_value').lower()
+            captcha_value_exp = cache.get(necessary_opts_dict.pop('captcha_key')).lower()
+            if captcha_value != captcha_value_exp:
+                raise CaptchaError()
+
+            # 用户有效性校验
+            user_obj = self._user_model.get_obj(**necessary_opts_dict)
+            domain_obj = self._domain_model.get_obj(uuid=user_obj.domain)
+            if not user_obj.enable or not domain_obj.enable:
+                raise UserInvalid()
+
+            # 发送验证码，并将验证码信息存入缓存
+            expire = 60
+            phone = necessary_opts_dict['phone']
+            captcha_str = tools.send_phone_captcha(phone, expire=expire)
+            cache.set(phone, captcha_str, timeout=expire)
+
+            # 返回发送成功
+            return self.standard_response('succeed to send captcha to %s' % phone)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class EmailCaptcha(BaseView):
+    """
+    发送邮箱验证码
+    """
+
+    _domain_model = DAO('partition.models.Domain')
+    _user_model = DAO('identity.models.User')
+
+    def post(self, request):
+        try:
+            pass
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
 class Auth(BaseView):
     """
     用于提供接口给服务进行请求鉴权
@@ -290,6 +360,7 @@ class Auth(BaseView):
     _auth_tools = AuthTools()
 
     _token_model = DAO('credence.models.Token')
+    _domain_model = DAO('partition.models.Domain')
 
     def post(self, request):
         try:
@@ -304,6 +375,12 @@ class Auth(BaseView):
             # 用户获取
             token_obj = self._token_model.get_obj(token=necessary_opts_dict.pop('token'))
             user_obj = self._auth_tools.get_user_of_token(token_obj)
+            if user_obj.level == 1:
+                return self.standard_response({
+                    'access': True,
+                    'allow_condition_list': [],
+                    'deny_condition_list': []
+                })
 
             # 获取 user 对象关联的 policy 列表，policy 判定处理后获取通过标记和条件
             policy_obj_qs = self._auth_tools.get_policies_of_user(user_obj)

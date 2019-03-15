@@ -84,6 +84,16 @@ class PasswordError(CustomException):
         super().__init__(exception_message)
 
 
+class UserInvalid(CustomException):
+    """
+    用户无效
+    """
+    def __init__(self):
+        self.code = 400
+        exception_message = 'user does not exist or invalid'
+        super().__init__(exception_message)
+
+
 class CaptchaError(CustomException):
     """
     验证码错误
@@ -153,7 +163,7 @@ class DatabaseError(CustomException):
         super().__init__(exception_message)
 
 
-class RequestError(CustomException):
+class RequestBackendError(CustomException):
     """
     对后端请求 api 错误
     """
