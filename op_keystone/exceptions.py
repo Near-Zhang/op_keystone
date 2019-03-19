@@ -131,7 +131,7 @@ class RequestParamsError(CustomException):
     def __init__(self, empty=False, not_json=False, opt=None, invalid=None):
         self.code = 400
         if empty:
-            exception_message = ''
+            exception_message = 'request params is empty'
         elif not_json:
             exception_message = 'request params is not a standard json'
         elif opt and not invalid:

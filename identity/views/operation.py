@@ -277,7 +277,7 @@ class Captcha(BaseView):
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
             # 生成验证码，以及保存
-            captcha_img, captcha_value = tools.generate_captcha_img()
+            captcha_img, captcha_value = tools.generate_captcha_img(size=(95, 30))
             bytes_mem = BytesIO()
             captcha_img.save(bytes_mem, 'png')
 
