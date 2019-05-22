@@ -208,13 +208,16 @@ class ResourceView(BaseView):
             obj = self._model.get_obj(uuid=uuid)
             self._model.validate_obj(obj)
 
+            # 获取提取列表
+            necessary_opts, extra_opts = self._model.get_opts(create=False)
+
             # 选项参数提取
-            extra_opts = self._model.get_opts(create=False)
             request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
             # 对象字段字典参数合成，结合请求信息，校验选项参数
-            field_opts = self._model.validate_opts_dict(extra_opts_dict)
+            field_opts = self._model.validate_opts_dict(necessary_opts_dict, extra_opts_dict)
 
             # 对象更新并返回
             updated_obj = self._model.update_obj(obj, **field_opts)

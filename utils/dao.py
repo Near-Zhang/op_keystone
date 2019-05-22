@@ -23,6 +23,7 @@ class DAO:
 
         self.model = model
         self.user = None
+        self.service = None
         self.query_obj = Q()
         if self.model.get_field('deleted_time'):
             self.query_obj = Q(deleted_time__isnull=True)
@@ -34,7 +35,12 @@ class DAO:
         :param request:  请求对象
         :return:
         """
-        self.user = request.user
+        if hasattr(request, 'user'):
+            self.user = request.user
+        else:
+            self.service = request.service
+            return
+
         if getattr(request, 'condition_tuple', None):
             for condition in request.condition_tuple[1]:
                 sub_q = self.parsing_query_str(condition)
@@ -63,6 +69,9 @@ class DAO:
         """
         融合请求的信息，校验是否有创建对象的权限
         """
+        if self.service:
+            return
+
         if not self.user:
             raise AttributeError('the attribute user is not set')
 
@@ -78,6 +87,9 @@ class DAO:
         :param obj: model object
         :param m2m: bool, 是否为关联性操作
         """
+        if self.service:
+            return
+
         if not self.user:
             raise AttributeError('the attribute user is not set')
 
@@ -123,32 +135,52 @@ class DAO:
         融合请求的信息，获取创建对象需要的选项列表
         :return:
         """
-        if not self.user:
+        operator = 0
+        if self.user:
+            operator = 1
+        elif self.service:
+            operator = 2
+
+        if operator == 0:
             raise AttributeError('the attribute user is not set')
         if not issubclass(self.model, ResourceModel):
             raise ValueError('the model is not a subclass of ResourceModel')
+
         if create:
             # 初始选项字典设置
-            self.init_opts_dict['created_by'] = self.user.uuid
-            if self.model.get_field('domain'):
-                self.init_opts_dict['domain'] = self.user.domain
+            if operator == 1:
+                self.init_opts_dict['created_by'] = self.user.uuid
+                if self.model.get_field('domain'):
+                    self.init_opts_dict['domain'] = self.user.domain
 
             # 选项列表获取
             necessary, extra, senior_extra = getattr(self.model, 'get_field_opts')()
+
+            if operator == 2:
+                necessary += ['created_by', 'domain']
+                return necessary, extra + senior_extra
+
             if self.user.level == 3:
                 return necessary, extra
             else:
                 return necessary, extra + senior_extra
         else:
             # 初始选项字典设置
-            self.init_opts_dict['updated_by'] = self.user.uuid
+            if operator == 1:
+                self.init_opts_dict['updated_by'] = self.user.uuid
 
             # 选项列表获取
             extra, senior_extra = getattr(self.model, 'get_field_opts')(create=False)
+            necessary = []
+
+            if operator == 2:
+                necessary = ['updated_by']
+                return necessary, extra + senior_extra
+
             if self.user.level == 3:
-                return extra
+                return necessary, extra
             else:
-                return extra + senior_extra
+                return necessary, extra + senior_extra
 
     def validate_opts_dict(self, *opts_dicts):
         """
@@ -156,6 +188,9 @@ class DAO:
         :param opts_dicts: 选项字典
         :return: dict, 字段参数字典
         """
+        if self.service:
+            return opts_dicts
+
         if not self.init_opts_dict:
             raise AttributeError('the attribute init_opts_dict is not set')
 

@@ -30,19 +30,23 @@ class Domain(ResourceModel):
         main_domain_count = DAO('partition.models.Domain').get_obj_qs(is_main=True).count()
         if main_domain_count < 1:
             self.is_main = True
+            self.enable = True
         if main_domain_count == 1:
             self.domain = False
         if main_domain_count > 1:
             raise DatabaseError('more than one main domain', self.__class__.__name__)
 
-    def post_update(self):
+    def pre_update(self):
         """
-        更新前，检查是否为 main domain 的存在
+        更新前，main domain 的 enable 只为 true ，检查是否 main domain 的存在
         :return:
         """
-        main_domain_count = DAO('partition.models.Domain').get_obj_qs(is_main=True).count()
+        main_domain_qs = DAO('partition.models.Domain').get_obj_qs(is_main=True)
+        main_domain_count = main_domain_qs.count()
         if main_domain_count < 1:
             raise DatabaseError('there is no main domain', self.__class__.__name__)
+        if main_domain_count == 1 and self.uuid == main_domain_qs.first().uuid:
+            self.enable = True
         if main_domain_count > 1:
             raise DatabaseError('more than one main domain', self.__class__.__name__)
 
