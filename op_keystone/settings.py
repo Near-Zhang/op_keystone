@@ -134,4 +134,5 @@ ROUTE_WHITE_LIST = [
 # auth policy white list
 POLICY_WHITE_LIST = [
     ('/identity/logout/', 'post'),
+    ('/identity/privilege-for-actions/', 'post')
 ]
