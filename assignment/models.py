@@ -11,7 +11,7 @@ class Role(ResourceModel):
         verbose_name = '角色'
         unique_together = ['name', 'domain']
         db_table = 'role'
-        ordering = ('-builtin',)
+        ordering = ('-builtin', '-created_time')
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')
@@ -78,7 +78,7 @@ class Policy(ResourceModel):
         verbose_name = '策略'
         unique_together = ['name', 'domain']
         db_table = 'policy'
-        ordering = ('-builtin',)
+        ordering = ('-builtin', '-created_time')
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')
@@ -151,6 +151,7 @@ class Action(ResourceModel):
     class Meta:
         verbose_name = '动作'
         unique_together = ['name', 'service']
+        ordering = ('-created_time', )
         db_table = 'action'
 
     # 必要字段
@@ -221,7 +222,7 @@ class RoleTpl(ResourceModel):
         verbose_name = '角色模版'
         unique_together = ['name', 'domain']
         db_table = 'role_tpl'
-        ordering = ('-builtin',)
+        ordering = ('-builtin', '-created_time')
 
     # 必要字段
     name = models.CharField(max_length=64, verbose_name='名字')
