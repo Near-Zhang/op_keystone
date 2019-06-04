@@ -409,24 +409,24 @@ class PrivilegeForActions(BaseView):
             # 获取 user 对象关联的 policy 列表
             policy_obj_qs = self._auth_tools.get_policies_of_user(request.user)
 
+            # 默认响应数据
+            privilege_data = {
+                'default_access': False,
+                'default_allow_condition_list': [],
+                'deny_deny_condition_list': [],
+                'privileges': {}
+            }
+
             # 全局管理员返回拥有全部动作权限
             if request.user.level == 1:
-                return self.standard_response({
-                    'default_access': True,
-                    'default_allow_condition_list': [],
-                    'deny_deny_condition_list': [],
-                    'privileges': {}
-                })
+                privilege_data['default_access'] = True
+                return self.standard_response(privilege_data)
 
-            default_access = False,
-            default_allow_condition_list = []
-            deny_deny_condition_list = []
-            privileges = {}
             # 其他用户根据生成默认权限和具体动作对应的权限数据
             for policy_obj in policy_obj_qs:
                 action_obj = self._action_model.get_obj(uuid=policy_obj.action)
 
-                action_pri = privileges.get(action_obj.name)
+                action_pri = privilege_data['privileges'].get(action_obj.name)
                 if not action_pri:
                     action_pri = {
                         'access': False,
@@ -434,23 +434,24 @@ class PrivilegeForActions(BaseView):
                         'deny_condition_list': []
                     }
 
+                # 全部管理权限的动作修改到 default 权限上
                 res_c = None
                 if policy_obj.res != '*':
                     res_c = 'uuid:' + policy_obj.res.replace(',', '|')
-                print(action_obj.serialize())
                 if action_obj.url == '*' and action_obj.method == '*':
-                    default_access = True
+                    privilege_data['default_access'] = True
 
                     if policy_obj.effect == 'allow' and policy_obj.condition:
-                        default_allow_condition_list.append(policy_obj.condition)
+                        privilege_data['default_allow_condition_list'].append(policy_obj.condition)
                         if res_c:
-                            default_allow_condition_list.append(res_c)
+                            privilege_data['default_allow_condition_list'].append(res_c)
 
                     if policy_obj.effect == 'deny' and policy_obj.condition:
-                        deny_deny_condition_list.append(policy_obj.condition)
+                        privilege_data['deny_deny_condition_list'].append(policy_obj.condition)
                         if res_c:
-                            deny_deny_condition_list.append(res_c)
+                            privilege_data['deny_deny_condition_list'].append(res_c)
 
+                # 具体管理权限的动作修改到具体动作上，排除查询的权限
                 elif action_obj.method != 'get':
                     action_pri['access'] = True
                     if policy_obj.effect == 'allow' and policy_obj.condition:
@@ -463,16 +464,9 @@ class PrivilegeForActions(BaseView):
                         if res_c:
                             action_pri['allow_condition_list'].append(res_c)
 
-                    privileges[action_obj.name] = action_pri
+                            privilege_data['privileges'][action_obj.name] = action_pri
 
-            return self.standard_response({
-                'default_access': default_access,
-                'default_allow_condition_list': default_allow_condition_list,
-                'deny_deny_condition_list': deny_deny_condition_list,
-                'privileges': privileges
-            })
+            return self.standard_response(privilege_data)
 
         except CustomException as e:
             return self.exception_to_response(e)
-
-

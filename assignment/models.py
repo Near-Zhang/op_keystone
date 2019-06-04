@@ -2,6 +2,7 @@ from op_keystone.base_model import BaseModel, ResourceModel
 from django.db import models
 from utils.dao import DAO
 from op_keystone.exceptions import DatabaseError
+from utils.tools import json_dumper, json_loader
 
 
 class Role(ResourceModel):
@@ -213,3 +214,74 @@ class M2MRolePolicy(BaseModel):
 
     role = models.CharField(max_length=32, verbose_name='角色UUID')
     policy = models.CharField(max_length=32, verbose_name='策略UUID')
+
+
+class RoleTpl(ResourceModel):
+    class Meta:
+        verbose_name = '角色模版'
+        unique_together = ['name', 'domain']
+        db_table = 'role_tpl'
+        ordering = ('-builtin',)
+
+    # 必要字段
+    name = models.CharField(max_length=64, verbose_name='名字')
+    domain = models.CharField(max_length=32, verbose_name='归属域UUID')
+    actions = models.TextField(verbose_name='动作UUID列表')
+
+    # 附加字段
+    builtin = models.BooleanField(default=False, verbose_name='是否内置')
+    enable = models.BooleanField(default=True, verbose_name="是否启用")
+    comment = models.CharField(max_length=64, null=True, verbose_name='备注')
+
+    def pre_create(self):
+        """
+        创建前，检查 domain 是否存在，以及是否内置，序列化 actions 为 json
+        """
+        super().pre_create()
+
+        if self.builtin:
+            self.domain = DAO('partition.models.Domain').get_obj(is_main=True).uuid
+        else:
+            DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+        self.actions = json_dumper(self.actions)
+
+    def pre_update(self):
+        """
+        更新前，检查 domain 是否存在，以及是否内置，序列化 actions 为 json
+        """
+        if self.builtin:
+            self.domain = DAO('partition.models.Domain').get_obj(is_main=True).uuid
+        else:
+            DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+        self.actions = json_dumper(self.actions)
+
+    def serialize(self):
+        """
+        对象序列化，json 解析 actions
+        :return: dict
+        """
+        d = super().serialize()
+        d['actions'] = json_loader(d['actions'])
+
+        return d
+
+    @staticmethod
+    def get_field_opts(create=True):
+        """
+        获取创建对象需要的字段列表
+        :return:
+        """
+        necessary = ['name', 'actions']
+        extra = ['comment', 'enable']
+        senior_extra = ['domain', 'builtin']
+
+        if create:
+            return necessary, extra, senior_extra
+        else:
+            return necessary + extra, senior_extra
+
+    @classmethod
+    def get_default_query_keys(cls):
+        return ['name', 'domain'] + super().get_default_query_keys()

@@ -111,8 +111,15 @@ class AuthTools:
             # 请求 method 不匹配期望 method，退出当次循环
             method = request_info['method']
             exp_method = action_obj.method
-            if exp_method != '*' and method != exp_method:
-                continue
+            if exp_method != '*':
+                if exp_method == 'modify':
+                    if method != 'post' and method != 'put':
+                        continue
+                elif exp_method == 'manage':
+                    if method != 'post' and method != 'put' and method != 'delete':
+                        continue
+                elif method != exp_method:
+                    continue
 
             # 请求 res 不匹配期望 res，退出当次循环
             res = request_info['routing_params'].get('uuid')

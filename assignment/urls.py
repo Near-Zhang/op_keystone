@@ -8,5 +8,7 @@ urlpatterns = [
     re_path(r'^policies/(?P<uuid>\w+)/roles/$', PolicyToRoleView.as_view()),
     re_path(r'^roles/(?P<uuid>\w+)/users/$', RoleToUserView.as_view()),
     re_path(r'^roles/(?P<uuid>\w+)/groups/$', RoleToGroupView.as_view()),
-    re_path(r'^actions/((?P<uuid>\w+)/)?$', ActionsView.as_view())
+    re_path(r'^actions/((?P<uuid>\w+)/)?$', ActionsView.as_view()),
+    re_path(r'^role-tpls/((?P<uuid>\w+)/)?$', RoleTplsView.as_view()),
+    re_path(r'^tpl-based-role/$', TplBasedRole.as_view())
 ]
