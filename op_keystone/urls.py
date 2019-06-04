@@ -16,6 +16,7 @@ def handler404(request, **kwargs):
     except CustomException as e:
         return BaseView().exception_to_response(e)
 
+
 def handler500(request):
     try:
         raise InternalError()
