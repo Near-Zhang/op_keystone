@@ -464,7 +464,7 @@ class PrivilegeForActions(BaseView):
                         if res_c:
                             action_pri['allow_condition_list'].append(res_c)
 
-                            privilege_data['privileges'][action_obj.name] = action_pri
+                privilege_data['privileges'][action_obj.name] = action_pri
 
             return self.standard_response(privilege_data)
 
