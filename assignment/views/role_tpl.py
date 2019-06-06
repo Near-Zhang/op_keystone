@@ -56,14 +56,21 @@ class TplBasedRole(BaseView):
             for a in role_tpl['actions']:
                 condition = None
                 if a.get('enable_condition'):
-                    condition = a.get('condition_field') + '|'.join(necessary_opts_dict['condition_values'])
+                    condition_values = necessary_opts_dict.get('condition_values')
+                    if len(condition_values) > 0:
+                        condition = a.get('condition_field') + '|'.join(necessary_opts_dict['condition_values'])
+
+                if a.get('effect') and a.get('effect') in ['allow', 'deny'] :
+                    effect = a.get('effect')
+                else:
+                    effect = 'allow'
 
                 policy_fields = {
                     'name': necessary_opts_dict['name'] + ' 的策略' + str(i),
                     'action': a['uuid'],
                     'res': '*',
                     'condition': condition,
-                    'effect': 'allow',
+                    'effect': effect,
                     'comment' : '为 %s 生成的策略' % necessary_opts_dict['name']
                 }
                 self._policy_model.get_opts(create=True)
