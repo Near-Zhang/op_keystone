@@ -215,7 +215,7 @@ class DAO:
 
         return field_opts
 
-    def parsing_query_str(self, query_str, url_params=False):
+    def parsing_query_str(self, query_str, query_type='startswith', url_params=False):
         """
         解析查询字符串为查询对象
         :param query_str: str, 查询字符串
@@ -226,6 +226,14 @@ class DAO:
         if not query_str:
             return q
 
+        query_type_list = [
+            'exact', 'iexact', 'contains',
+            'icontians', 'startswith', 'istartswith',
+            'endswith', 'iendswith '
+        ]
+        if query_type not in query_type_list:
+            query_type = 'startswith'
+
         query_list = query_str.split(',')
         for sub_query_str in query_list:
             if ':' not in sub_query_str:
@@ -235,7 +243,7 @@ class DAO:
                         value_list = sub_query_str.split('|')
                         inside_q = Q()
                         if url_params:
-                            key += '__startswith'
+                            key = key + '__' + query_type
                         for value in value_list:
                             inside_q |= Q(**{key: value})
                         sub_q |= inside_q
@@ -249,7 +257,7 @@ class DAO:
                 value_list = value_str.split('|')
                 sub_q = Q()
                 if url_params:
-                    key += '__startswith'
+                    key = key + '__' + query_type
                 for value in value_list:
                     sub_q |= Q(**{key: value})
             q &= sub_q

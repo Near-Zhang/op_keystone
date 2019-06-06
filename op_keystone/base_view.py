@@ -153,13 +153,14 @@ class ResourceView(BaseView):
                 return self.standard_response(obj.serialize())
 
             # 定义参数提取列表
-            extra_opts = ['query', 'page', 'page-size']
+            extra_opts = ['query', 'query-type' , 'page', 'page-size']
             request_params = self.get_params_dict(request, nullable=True)
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
             # 查询对象生成
             query_str = extra_opts_dict.pop('query', None)
-            query_obj = self._model.parsing_query_str(query_str, url_params=True)
+            query_type = extra_opts_dict.pop('query_type', None)
+            query_obj = self._model.parsing_query_str(query_str, query_type, url_params=True)
 
             # 当前页数据获取
             total_list = self._model.get_dict_list(query_obj)
@@ -274,7 +275,8 @@ class M2MRelationView(BaseView):
 
             # 查询对象生成
             query_str = extra_opts_dict.pop('query', None)
-            query_obj = self._to_model.parsing_query_str(query_str, url_params=True)
+            query_type = extra_opts_dict.pop('query_type', None)
+            query_obj = self._to_model.parsing_query_str(query_str, query_type, url_params=True)
 
             # 获取目的对象列表，并获取当前页数据
             to_uuid_list = self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid})

@@ -51,13 +51,16 @@ class TplBasedRole(BaseView):
             else:
                 policy_exta_opts = {}
 
-            condition = 'projects:' + '|'.join(necessary_opts_dict['projects'])
             policy_uuid_list = []
             i = 1
-            for action in role_tpl['actions']:
+            for a in role_tpl['actions']:
+                condition = None
+                if a.get('enable_condition'):
+                    condition = a.get('condition_field') + '|'.join(necessary_opts_dict['condition_values'])
+
                 policy_fields = {
                     'name': necessary_opts_dict['name'] + ' 的策略' + str(i),
-                    'action': action,
+                    'action': a['uuid'],
                     'res': '*',
                     'condition': condition,
                     'effect': 'allow',
