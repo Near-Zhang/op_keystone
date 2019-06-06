@@ -24,6 +24,7 @@ class TplBasedRole(BaseView):
         self._role_tpl_model = DAO('assignment.models.RoleTpl')
         self._policy_model = DAO('assignment.models.Policy')
         self._role_model = DAO('assignment.models.Role')
+        self._action_model = DAO('assignment.models.Action')
         self._m2m_model = DAO('assignment.models.M2MRolePolicy')
 
     def post(self, request):
@@ -40,6 +41,7 @@ class TplBasedRole(BaseView):
             self._role_tpl_model.combine_request(request)
             self._policy_model.combine_request(request)
             self._role_model.combine_request(request)
+            self._action_model.combine_request(request)
 
             # 模版对象获取
             role_tpl = self._role_tpl_model.get_obj(uuid=necessary_opts_dict['role_tpl']).serialize()
@@ -52,7 +54,6 @@ class TplBasedRole(BaseView):
                 policy_exta_opts = {}
 
             policy_uuid_list = []
-            i = 1
             for a in role_tpl['actions']:
                 condition = None
                 if a.get('enable_condition'):
@@ -65,19 +66,20 @@ class TplBasedRole(BaseView):
                 else:
                     effect = 'allow'
 
+                action_obj = self._action_model.get_obj(uuid=a['uuid'])
+
                 policy_fields = {
-                    'name': necessary_opts_dict['name'] + ' 的策略' + str(i),
+                    'name': '%s 对于 %s 的策略' % (necessary_opts_dict['name'], action_obj.name),
                     'action': a['uuid'],
                     'res': '*',
                     'condition': condition,
                     'effect': effect,
-                    'comment' : '为 %s 生成的策略' % necessary_opts_dict['name']
+                    'comment' : '%s 对于 %s 的策略' % (necessary_opts_dict['name'], action_obj.name)
                 }
                 self._policy_model.get_opts(create=True)
                 policy_opts = self._policy_model.validate_opts_dict(policy_fields, policy_exta_opts)
                 policy_created = self._policy_model.create_obj(**policy_opts)
                 policy_uuid_list.append(policy_created.uuid)
-                i += 1
 
             # 角色创建
             role_fields = {
