@@ -85,13 +85,14 @@ class Policy(ResourceModel):
     domain = models.CharField(max_length=32, verbose_name='归属域UUID')
     action = models.CharField(max_length=64, verbose_name='动作UUID')
     res = models.TextField(verbose_name='资源列表')
-    condition = models.CharField(max_length=512, null=True, verbose_name='资源条件')
     effect = models.CharField(max_length=16, verbose_name='效力')
 
     # 附加字段
+    condition = models.CharField(max_length=512, null=True, verbose_name='资源条件')
     builtin = models.BooleanField(default=False, verbose_name='是否内置')
     enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
+    role_based_tpl = models.CharField(max_length=64, null=True, verbose_name='基于模版的角色UUID')
 
     def pre_create(self):
         """

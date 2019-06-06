@@ -46,12 +46,16 @@ class TplBasedRole(BaseView):
             # 模版对象获取
             role_tpl = self._role_tpl_model.get_obj(uuid=necessary_opts_dict['role_tpl']).serialize()
 
+            # 角色创建
+            role_fields = {
+                'name': necessary_opts_dict['name']
+            }
+            self._role_model.get_opts(create=True)
+            role_opts = self._role_model.validate_opts_dict(role_fields, extra_opts_dict)
+            role_created = self._role_model.create_obj(**role_opts)
+
             # 生成条件，策略创建
-            domain = extra_opts_dict.get('domain')
-            if domain:
-                policy_exta_opts = { 'domain': domain }
-            else:
-                policy_exta_opts = {}
+            extra_opts_dict.pop('comment')
 
             policy_uuid_list = []
             for a in role_tpl['actions']:
@@ -59,7 +63,7 @@ class TplBasedRole(BaseView):
                 if a.get('enable_condition'):
                     condition_values = necessary_opts_dict.get('condition_values')
                     if len(condition_values) > 0:
-                        condition = a.get('condition_field') + '|'.join(necessary_opts_dict['condition_values'])
+                        condition = a.get('condition_field') + ':' + '|'.join(necessary_opts_dict['condition_values'])
 
                 if a.get('effect') and a.get('effect') in ['allow', 'deny'] :
                     effect = a.get('effect')
@@ -69,25 +73,18 @@ class TplBasedRole(BaseView):
                 action_obj = self._action_model.get_obj(uuid=a['uuid'])
 
                 policy_fields = {
-                    'name': '%s 对于 %s 的策略' % (necessary_opts_dict['name'], action_obj.name),
+                    'name': '%s 对于 %s 的策略' % (role_created.name, action_obj.name),
                     'action': a['uuid'],
                     'res': '*',
                     'condition': condition,
                     'effect': effect,
-                    'comment' : '%s 对于 %s 的策略' % (necessary_opts_dict['name'], action_obj.name)
+                    'comment' : '%s 对于 %s 的策略' % (role_created.name, action_obj.name),
+                    'role_based_tpl': role_created.uuid
                 }
                 self._policy_model.get_opts(create=True)
-                policy_opts = self._policy_model.validate_opts_dict(policy_fields, policy_exta_opts)
+                policy_opts = self._policy_model.validate_opts_dict(policy_fields, extra_opts_dict)
                 policy_created = self._policy_model.create_obj(**policy_opts)
                 policy_uuid_list.append(policy_created.uuid)
-
-            # 角色创建
-            role_fields = {
-                'name': necessary_opts_dict['name']
-            }
-            self._role_model.get_opts(create=True)
-            role_opts = self._role_model.validate_opts_dict(role_fields, extra_opts_dict)
-            role_created = self._role_model.create_obj(**role_opts)
 
             # 策略绑定角色
             for p in policy_uuid_list:
