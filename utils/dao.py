@@ -228,7 +228,7 @@ class DAO:
 
         query_type_list = [
             'exact', 'iexact', 'contains',
-            'icontians', 'startswith', 'istartswith',
+            'icontains', 'startswith', 'istartswith',
             'endswith', 'iendswith '
         ]
         if query_type not in query_type_list:
