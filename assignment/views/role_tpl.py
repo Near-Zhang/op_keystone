@@ -29,7 +29,7 @@ class TplBasedRole(BaseView):
     def post(self, request):
         try:
             # 参数提取
-            necessary_opts = ['name', 'role_tpl', 'projects']
+            necessary_opts = ['name', 'role_tpl', 'condition_values']
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
