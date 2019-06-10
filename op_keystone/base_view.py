@@ -467,6 +467,22 @@ class MultiDeleteView(BaseView):
 
     def post(self, request):
         try:
-            pass
+            # 结合请求信息，设置 model 查询参数
+            self._model.combine_request(request)
+
+            # 参数提取
+            necessary_opts = ['uuid_list']
+            request_params = self.get_params_dict(request)
+            necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
+
+            # 检验并删除对象
+            for uuid in necessary_opts_dict['uuid_list']:
+                obj = self._model.get_obj(uuid=uuid)
+                self._model.validate_obj(obj)
+                self._model.delete_obj(obj)
+
+            # 返回删除信息
+            return self.standard_response('succeed to delete multi objects ')
+
         except CustomException as e:
             return self.exception_to_response(e)
