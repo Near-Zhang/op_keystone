@@ -418,13 +418,13 @@ class M2MRelationView(BaseView):
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            # 获取需要删除的 group uuid 列表
-            to_opts_set = set(necessary_opts_dict['uuid_list'])
-            old_to_opts_set = set(self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid}))
-            del_to_opts_list = list(to_opts_set & old_to_opts_set)
+            # 获取需要删除的目的对象 uuid 列表
+            to_uuid_set = set(necessary_opts_dict['uuid_list'])
+            old_to_uuid_set = set(self._m2m_model.get_field_list(self._to_field, **{self._from_field: uuid}))
+            del_to_uuid_list = list(to_uuid_set & old_to_uuid_set)
 
             # 删除多对多关系
-            for to_uuid in del_to_opts_list:
+            for to_uuid in del_to_uuid_list:
                 try:
                     to_obj = self._to_model.get_obj(uuid=to_uuid)
                 except CustomException:
@@ -456,3 +456,17 @@ class M2MRelationView(BaseView):
             return self.exception_to_response(e)
 
 
+class MultiDeleteView(BaseView):
+    """
+    批量删除视图类
+    """
+
+    def __init__(self, model):
+        super().__init__()
+        self._model = DAO(model)
+
+    def post(self, request):
+        try:
+            pass
+        except CustomException as e:
+            return self.exception_to_response(e)
