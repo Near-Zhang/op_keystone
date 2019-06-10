@@ -395,9 +395,9 @@ class Auth(BaseView):
             return self.exception_to_response(e)
 
 
-class PrivilegeForActions(BaseView):
+class PrivilegeForManageActions(BaseView):
     """
-    用于提供给前端关于该用户关于动作的权限数据
+    用于提供给前端关于该用户关于动作的修改权限数据，附带详细条件，用于展示按钮
     """
 
     _auth_tools = AuthTools()
@@ -464,7 +464,57 @@ class PrivilegeForActions(BaseView):
                         if res_c:
                             action_pri['allow_condition_list'].append(res_c)
 
-                privilege_data['privileges'][action_obj.name] = action_pri
+                    privilege_data['privileges'][action_obj.name] = action_pri
+
+            return self.standard_response(privilege_data)
+
+        except CustomException as e:
+            return self.exception_to_response(e)
+
+
+class PrivilegeForDescribeActions(BaseView):
+    """
+    用于提供给前端关于该用户关于动作的查看权限数据，忽略条件，用于展示菜单
+    """
+
+    _auth_tools = AuthTools()
+    _token_model = DAO('credence.models.Token')
+    _action_model = DAO('assignment.models.Action')
+
+    def get(self, request):
+        try:
+            # 获取 user 对象关联的 policy 列表
+            policy_obj_qs = self._auth_tools.get_policies_of_user(request.user)
+
+            # 默认响应数据
+            privilege_data = {
+                'default_access': False,
+                'privileges': {}
+            }
+
+            # 全局管理员返回拥有全部查看权限
+            if request.user.level == 1:
+                privilege_data['default_access'] = True
+                return self.standard_response(privilege_data)
+
+            # 其他用户根据生成默认权限和具体动作对应的权限数据
+            for policy_obj in policy_obj_qs:
+                action_obj = self._action_model.get_obj(uuid=policy_obj.action)
+
+                action_pri = privilege_data['privileges'].get(action_obj.name)
+                if not action_pri:
+                    action_pri = {
+                        'access': False,
+                    }
+
+                # 全部管理权限的查看修改到 default 权限上
+                if action_obj.url == '*' and (action_obj.method == '*' or action_obj.method == 'get'):
+                    privilege_data['default_access'] = True
+
+                # 具体管理权限的查看修改到具体动作上，排除修改的权限
+                elif action_obj.method == 'get' or action_obj.method == '*':
+                    action_pri['access'] = True
+                    privilege_data['privileges'][action_obj.name] = action_pri
 
             return self.standard_response(privilege_data)
 

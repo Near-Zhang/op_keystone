@@ -17,5 +17,6 @@ urlpatterns = [
     path(r'phone-captcha/', PhoneCaptcha.as_view()),
     path(r'email-captcha/', PhoneCaptcha.as_view()),
     path(r'auth/', Auth.as_view()),
-    path(r'privilege-for-actions/', PrivilegeForActions.as_view())
+    path(r'privilege-for-manage-actions/', PrivilegeForManageActions.as_view()),
+    path(r'privilege-for-describe-actions/', PrivilegeForDescribeActions.as_view())
 ]
