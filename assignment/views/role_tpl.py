@@ -27,7 +27,7 @@ class TplBasedRole(BaseView):
         self._action_model = DAO('assignment.models.Action')
         self._m2m_model = DAO('assignment.models.M2MRolePolicy')
 
-    def post(self, request):
+    def post(self, request, uuid=None):
         try:
             # 参数提取
             necessary_opts = ['name', 'role_tpl', 'condition_values']
