@@ -11,5 +11,6 @@ urlpatterns = [
     re_path(r'^actions/((?P<uuid>\w+)/)?$', ActionsView.as_view()),
     re_path(r'^role-tpls/((?P<uuid>\w+)/)?$', RoleTplsView.as_view()),
     re_path(r'^tpl-based-role/((?P<uuid>\w+)/)?$', TplBasedRole.as_view()),
-    re_path(r'^multi-delete-policies/$', MultiDeletePolicesView.as_view())
+    re_path(r'^multi-delete-policies/$', MultiDeletePolicesView.as_view()),
+    re_path(r'^multi-delete-roles/$', MultiDeleteRoleView.as_view())
 ]
