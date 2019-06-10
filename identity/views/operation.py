@@ -510,6 +510,7 @@ class PrivilegeForDescribeActions(BaseView):
                 # 全部管理权限的查看修改到 default 权限上
                 if action_obj.url == '*' and (action_obj.method == '*' or action_obj.method == 'get'):
                     privilege_data['default_access'] = True
+                    return self.standard_response(privilege_data)
 
                 # 具体管理权限的查看修改到具体动作上，排除修改的权限
                 elif action_obj.method == 'get' or action_obj.method == '*':
