@@ -251,15 +251,19 @@ class DAO:
                     continue
             else:
                 key, value_str = sub_query_str.split(':')
-                if ('__' in key and not self.model.get_field(key.split('__')[0])) or \
+                get_custom_query_keys = getattr(self.model, 'get_custom_query_keys', None)
+                if get_custom_query_keys and key in get_custom_query_keys():
+                    sub_q = getattr(self.model, 'parsing_custom_query')(key, value_str)
+                elif ('__' in key and not self.model.get_field(key.split('__')[0])) or \
                     ('__' not in key and not self.model.get_field(key)):
                     continue
-                value_list = value_str.split('|')
-                sub_q = Q()
-                if url_params:
-                    key = key + '__' + query_type
-                for value in value_list:
-                    sub_q |= Q(**{key: value})
+                else:
+                    value_list = value_str.split('|')
+                    sub_q = Q()
+                    if url_params:
+                        key = key + '__' + query_type
+                    for value in value_list:
+                        sub_q |= Q(**{key: value})
             q &= sub_q
         return q
 

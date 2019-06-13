@@ -1,6 +1,7 @@
 from django.db import models
 from utils import tools
 from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Q
 
 
 class BaseModel(models.Model):
@@ -95,3 +96,11 @@ class ResourceModel(BaseModel):
     @classmethod
     def get_default_query_keys(cls):
         return ['uuid']
+
+    @classmethod
+    def get_custom_query_keys(cls):
+        return []
+
+    @classmethod
+    def parsing_custom_query(cls, key, value):
+        return Q()

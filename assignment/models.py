@@ -3,6 +3,7 @@ from django.db import models
 from utils.dao import DAO
 from op_keystone.exceptions import DatabaseError
 from utils.tools import json_dumper, json_loader
+from django.db.models import Q
 
 
 class Role(ResourceModel):
@@ -145,6 +146,23 @@ class Policy(ResourceModel):
     def get_default_query_keys(cls):
         return ['name', 'action', 'effect',
                 'domain'] + super().get_default_query_keys()
+
+    @classmethod
+    def get_custom_query_keys(cls):
+        return ['custom_type']
+
+    @classmethod
+    def parsing_custom_query(cls, key, value):
+        q = Q()
+        if key == 'custom_type':
+            if value == '0':
+                q &= Q(builtin=True)
+            elif value == '1':
+                q &= Q(builtin=False) & Q(role_based_tpl=None)
+            elif value == '2':
+                q &= Q(builtin=False) & ~Q(role_based_tpl=None)
+
+        return q
 
 
 class Action(ResourceModel):
