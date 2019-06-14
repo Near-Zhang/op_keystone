@@ -418,7 +418,7 @@ class PrivilegeForManageActions(BaseView):
                         'deny_condition_list': []
                     }
                 },
-                'privileges': []
+                'privileges': {}
             }
 
             # 全局管理员返回拥有全部动作权限
