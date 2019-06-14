@@ -411,21 +411,24 @@ class PrivilegeForManageActions(BaseView):
 
             # 默认响应数据
             privilege_data = {
-                'default_access': False,
-                'default_allow_condition_list': [],
-                'deny_deny_condition_list': [],
-                'privileges': {}
+                'default_privileges': {
+                    'default_service': {
+                        'access': False,
+                        'allow_condition_list': [],
+                        'deny_condition_list': []
+                    }
+                },
+                'privileges': []
             }
 
             # 全局管理员返回拥有全部动作权限
             if request.user.level == 1:
-                privilege_data['default_access'] = True
+                privilege_data['default_privileges']['default_service']['access'] = True
                 return self.standard_response(privilege_data)
 
             # 其他用户根据生成默认权限和具体动作对应的权限数据
             for policy_obj in policy_obj_qs:
                 action_obj = self._action_model.get_obj(uuid=policy_obj.action)
-
                 action_pri = privilege_data['privileges'].get(action_obj.name)
                 if not action_pri:
                     action_pri = {
@@ -433,23 +436,31 @@ class PrivilegeForManageActions(BaseView):
                         'allow_condition_list': [],
                         'deny_condition_list': []
                     }
+                service = action_obj.service
+                service_pri = {
+                    'access': False,
+                    'allow_condition_list': [],
+                    'deny_condition_list': []
+                }
 
                 # 全部管理权限的动作修改到 default 权限上
                 res_c = None
                 if policy_obj.res != '*':
                     res_c = 'uuid:' + policy_obj.res.replace(',', '|')
                 if action_obj.url == '*' and action_obj.method == '*':
-                    privilege_data['default_access'] = True
+                    service_pri['access'] = True
 
                     if policy_obj.effect == 'allow' and policy_obj.condition:
-                        privilege_data['default_allow_condition_list'].append(policy_obj.condition)
+                        service_pri['allow_condition_list'].append(policy_obj.condition)
                         if res_c:
-                            privilege_data['default_allow_condition_list'].append(res_c)
+                            service_pri['allow_condition_list'].append(res_c)
 
                     if policy_obj.effect == 'deny' and policy_obj.condition:
-                        privilege_data['deny_deny_condition_list'].append(policy_obj.condition)
+                        service_pri['deny_condition_list'].append(policy_obj.condition)
                         if res_c:
-                            privilege_data['deny_deny_condition_list'].append(res_c)
+                            service_pri['deny_condition_list'].append(res_c)
+
+                    privilege_data['default_privileges'][service] = service_pri
 
                 # 具体管理权限的动作修改到具体动作上，排除查询的权限
                 elif action_obj.method != 'get':
@@ -488,13 +499,17 @@ class PrivilegeForDescribeActions(BaseView):
 
             # 默认响应数据
             privilege_data = {
-                'default_access': False,
+                'default_privileges': {
+                    'default_service': {
+                        'access': False
+                    }
+                },
                 'privileges': {}
             }
 
             # 全局管理员返回拥有全部查看权限
             if request.user.level == 1:
-                privilege_data['default_access'] = True
+                privilege_data['default_privileges']['default_service']['access'] = True
                 return self.standard_response(privilege_data)
 
             # 其他用户根据生成默认权限和具体动作对应的权限数据
@@ -506,11 +521,15 @@ class PrivilegeForDescribeActions(BaseView):
                     action_pri = {
                         'access': False,
                     }
+                service = action_obj.service
+                service_pri = {
+                    'access': False,
+                }
 
                 # 全部管理权限的查看修改到 default 权限上
                 if action_obj.url == '*' and (action_obj.method == '*' or action_obj.method == 'get'):
-                    privilege_data['default_access'] = True
-                    return self.standard_response(privilege_data)
+                    service_pri['access'] = True
+                    privilege_data['default_privileges'][service] = service_pri
 
                 # 具体管理权限的查看修改到具体动作上，排除修改的权限
                 elif action_obj.method == 'get' or action_obj.method == '*':
