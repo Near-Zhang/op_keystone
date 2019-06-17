@@ -95,12 +95,26 @@ class ResourceModel(BaseModel):
 
     @classmethod
     def get_default_query_keys(cls):
+        """
+        获取默认的查询字段
+        :return: list
+        """
         return ['uuid']
 
     @classmethod
     def get_custom_query_keys(cls):
+        """
+        获取自定义的查询字段
+        :return: list
+        """
         return []
 
     @classmethod
     def parsing_custom_query(cls, key, value):
+        """
+        解析自定义的查询字段为 Q 对象
+        :param key: 字段名
+        :param value: 字段值
+        :return: Q object
+        """
         return Q()

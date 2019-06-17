@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'corsheaders',
@@ -54,16 +55,17 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'op_keystone.urls'
 
 WSGI_APPLICATION = 'op_keystone.wsgi.application'
-
+ASGI_APPLICATION = 'op_keystone.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases
-
 DATABASES = MYSQL_CONFIG
 
 # Cache
 CACHES = REDIS_CONFIG
 
+# CHANEL
+CHANNEL_LAYERS = CHANEL_CONFIG
 
 # Password validation
 # https://docs.djangoproject.com/en/2.0/ref/settings/#auth-password-validators

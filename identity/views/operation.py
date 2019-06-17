@@ -437,7 +437,6 @@ class PrivilegeForManageActions(BaseView):
                         'allow_condition_list': [],
                         'deny_condition_list': []
                     }
-                service_obj = self._service_model.get_obj(uuid=action_obj.service)
                 service_pri = {
                     'access': False,
                     'allow_condition_list': [],
@@ -449,6 +448,7 @@ class PrivilegeForManageActions(BaseView):
                 if policy_obj.res != '*':
                     res_c = 'uuid:' + policy_obj.res.replace(',', '|')
                 if action_obj.url == '*' and action_obj.method == '*':
+                    service_obj = self._service_model.get_obj(uuid=action_obj.service)
                     service_pri['access'] = True
 
                     if policy_obj.effect == 'allow' and policy_obj.condition:

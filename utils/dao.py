@@ -219,6 +219,7 @@ class DAO:
         """
         解析查询字符串为查询对象
         :param query_str: str, 查询字符串
+        :param query_type: str, 查询类型
         :param url_params: bool, 是否由 url 参数传递
         :return: Q object
         """

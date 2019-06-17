@@ -1,7 +1,12 @@
 from op_keystone.base_model import ResourceModel
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.db import models
 from utils.dao import DAO
 from utils import tools
+
+
+channel_layer = get_channel_layer()
 
 
 class Service(ResourceModel):
@@ -20,12 +25,26 @@ class Service(ResourceModel):
 
     def post_create(self):
         """
-        创建后，生成一个永久服务 token
+        创建后，生成一个永久服务 token，通知 channels
         """
         now = tools.get_datetime_with_tz()
         access_token = tools.generate_mapping_uuid(self.uuid, tools.datetime_to_humanized(now))
         DAO('credence.models.Token').create_obj(carrier=self.uuid, token=access_token,
                                                 expire_date=now, type=2)
+
+        async_to_sync(channel_layer.group_send)("catalog_notice", {
+            'type': 'chat.message',
+            'notice': 'service_created'
+        })
+
+    def post_update(self):
+        """
+        更新后，通知 channels
+        """
+        async_to_sync(channel_layer.group_send)("catalog_notice", {
+            'type': 'chat.message',
+            'notice': 'service_updated'
+        })
 
     def pre_delete(self):
         """
@@ -33,6 +52,16 @@ class Service(ResourceModel):
         :return:
         """
         DAO(Endpoint).delete_obj_qs(service=self.uuid)
+
+    def post_delete(self):
+        """
+        删除后，，通知 channels
+        :return:
+        """
+        async_to_sync(channel_layer.group_send)("catalog_notice", {
+            'type': 'chat.message',
+            'notice': 'service_deleted'
+        })
 
     @staticmethod
     def get_field_opts(create=True):
@@ -77,11 +106,39 @@ class Endpoint(ResourceModel):
         super().pre_create()
         DAO(Service).get_obj(uuid=self.service)
 
+    def post_create(self):
+        """
+        创建后，通知 channels
+        """
+        async_to_sync(channel_layer.group_send)("catalog_notice", {
+            'type': 'chat.message',
+            'notice': 'endpoint_created'
+        })
+
     def pre_update(self):
         """
         更新前，检查 service 是否存在
         """
         DAO(Service).get_obj(uuid=self.service)
+
+    def post_update(self):
+        """
+        更新后，通知 channels
+        """
+        async_to_sync(channel_layer.group_send)("catalog_notice", {
+            'type': 'chat.message',
+            'notice': 'endpoint_updated'
+        })
+
+    def post_delete(self):
+        """
+        删除后，，通知 channels
+        :return:
+        """
+        async_to_sync(channel_layer.group_send)("catalog_notice", {
+            'type': 'chat.message',
+            'notice': 'endpoint_deleted'
+        })
 
     @staticmethod
     def get_field_opts(create=True):
