@@ -403,6 +403,7 @@ class PrivilegeForManageActions(BaseView):
     _auth_tools = AuthTools()
     _token_model = DAO('credence.models.Token')
     _action_model = DAO('assignment.models.Action')
+    _service_model = DAO('catalog.models.Service')
 
     def get(self, request):
         try:
@@ -436,7 +437,7 @@ class PrivilegeForManageActions(BaseView):
                         'allow_condition_list': [],
                         'deny_condition_list': []
                     }
-                service = action_obj.service
+                service_obj = self._service_model.get_obj(uuid=action_obj.service)
                 service_pri = {
                     'access': False,
                     'allow_condition_list': [],
@@ -460,7 +461,7 @@ class PrivilegeForManageActions(BaseView):
                         if res_c:
                             service_pri['deny_condition_list'].append(res_c)
 
-                    privilege_data['default_privileges'][service] = service_pri
+                    privilege_data['default_privileges'][service_obj.name] = service_pri
 
                 # 具体管理权限的动作修改到具体动作上，排除查询的权限
                 elif action_obj.method != 'get':
@@ -491,6 +492,7 @@ class PrivilegeForDescribeActions(BaseView):
     _auth_tools = AuthTools()
     _token_model = DAO('credence.models.Token')
     _action_model = DAO('assignment.models.Action')
+    _service_model = DAO('catalog.models.Service')
 
     def get(self, request):
         try:
@@ -521,7 +523,7 @@ class PrivilegeForDescribeActions(BaseView):
                     action_pri = {
                         'access': False,
                     }
-                service = action_obj.service
+                service_obj = self._service_model.get_obj(uuid=action_obj.service)
                 service_pri = {
                     'access': False,
                 }
@@ -529,7 +531,7 @@ class PrivilegeForDescribeActions(BaseView):
                 # 全部管理权限的查看修改到 default 权限上
                 if action_obj.url == '*' and (action_obj.method == '*' or action_obj.method == 'get'):
                     service_pri['access'] = True
-                    privilege_data['default_privileges'][service] = service_pri
+                    privilege_data['default_privileges'][service_obj.name] = service_pri
 
                 # 具体管理权限的查看修改到具体动作上，排除修改的权限
                 elif action_obj.method == 'get' or action_obj.method == '*':
