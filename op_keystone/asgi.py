@@ -1,10 +1,14 @@
-from channels.routing import ProtocolTypeRouter, URLRouter
-import catalog.routing
+"""
+ASGI entrypoint. Configures Django and then runs the application
+defined in the ASGI_APPLICATION setting.
+"""
 
+import os
+import django
+from channels.routing import get_default_application
 
-application = ProtocolTypeRouter({
-    # (http->django views is added by default)
-    'websocket': URLRouter(
-        catalog.routing.urlpatterns
-    ),
-})
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "op_keystone.settings")
+
+django.setup()
+
+application = get_default_application()

@@ -55,7 +55,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'op_keystone.urls'
 
 WSGI_APPLICATION = 'op_keystone.wsgi.application'
-ASGI_APPLICATION = 'op_keystone.asgi.application'
+ASGI_APPLICATION = 'op_keystone.routing.application'
 
 # Database
 # https://docs.djangoproject.com/en/2.0/ref/settings/#databases

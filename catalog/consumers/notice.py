@@ -6,6 +6,9 @@ import json
 
 
 class NoticeConsumer(AsyncWebsocketConsumer):
+    """
+    当 service 或 endpoint 有改动时，通知客户端
+    """
 
     _user_model = DAO('identity.models.User')
     _room_group_name = 'catalog_notice'

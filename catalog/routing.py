@@ -1,7 +1,8 @@
-from django.urls import path, re_path
+from channels.routing import URLRouter
+from django.urls import re_path
 from .consumers import *
 
 
-urlpatterns = [
-    re_path(r'^catalog/ws/notice/((?P<uuid>\w+)/)?$', NoticeConsumer)
-]
+urlpatterns = URLRouter([
+    re_path(r'^ws/notice/((?P<uuid>\w+)/)?$', NoticeConsumer)
+])
