@@ -1,5 +1,6 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from op_keystone.exceptions import CustomException
+from django.db import close_old_connections
 from utils.dao import DAO
 import json
 
@@ -13,6 +14,7 @@ class NoticeConsumer(AsyncWebsocketConsumer):
         user_uuid = self.scope['url_route']['kwargs']['uuid']
 
         try:
+            close_old_connections()
             self._user_model.get_obj(uuid=user_uuid)
 
         except CustomException:
