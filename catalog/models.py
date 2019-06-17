@@ -20,6 +20,7 @@ class Service(ResourceModel):
     function = models.CharField(max_length=128, verbose_name='功能')
 
     # 附加字段
+    protocol = models.CharField(max_length=16, default='http', verbose_name='协议')
     enable = models.BooleanField(default=True, verbose_name='是否启用')
     comment = models.CharField(max_length=512, null=True, verbose_name='备注信息')
 
@@ -70,7 +71,7 @@ class Service(ResourceModel):
         :return:
         """
         necessary = ['name', 'function']
-        extra = ['enable', 'comment']
+        extra = ['enable', 'comment', 'protocol']
         senior_extra = []
 
         if create:
@@ -80,7 +81,7 @@ class Service(ResourceModel):
 
     @classmethod
     def get_default_query_keys(cls):
-        return ['name', 'function'] + super().get_default_query_keys()
+        return ['name', 'function', 'protocol'] + super().get_default_query_keys()
 
 
 class Endpoint(ResourceModel):
