@@ -3,12 +3,12 @@ from django.urls import path
 import catalog.routing
 
 
-urlpatterns = [
-    path(r'catalog/', catalog.routing.urlpatterns)
+websocket_urlpatterns = [
+    path(r'catalog/', catalog.routing.websocket_urlpatterns)
 ]
 
 
 application = ProtocolTypeRouter({
     # (http->django views is added by default)
-    'websocket': URLRouter(urlpatterns)
+    'websocket': URLRouter(websocket_urlpatterns)
 })

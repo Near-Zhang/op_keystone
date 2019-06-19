@@ -11,7 +11,7 @@ class NoticeConsumer(AsyncWebsocketConsumer):
     """
 
     _user_model = DAO('identity.models.User')
-    _room_group_name = 'catalog_notice'
+    _group_name = 'catalog_notice'
 
     async def connect(self):
         user_uuid = self.scope['url_route']['kwargs']['uuid']
@@ -25,7 +25,7 @@ class NoticeConsumer(AsyncWebsocketConsumer):
 
         else:
             await self.channel_layer.group_add(
-                self._room_group_name,
+                self._group_name,
                 self.channel_name
             )
 
@@ -33,7 +33,7 @@ class NoticeConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
-            self._room_group_name,
+            self._group_name,
             self.channel_name
         )
 
