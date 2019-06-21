@@ -125,7 +125,7 @@ class User(ResourceModel):
 
     def validate_password(self):
         """
-        进行密码合法校验，成功则进行加盐哈希
+        进行密码合法校验，成功则进行加盐哈希，并修改到密码
         """
         try:
             v_password(self.password, self)
