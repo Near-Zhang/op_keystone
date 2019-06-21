@@ -36,8 +36,9 @@ class LoginView(BaseView):
 
             # 验证码校验
             captcha_value = necessary_opts_dict.pop('captcha_value').lower()
-            captcha_value_exp = cache.get(necessary_opts_dict.pop('captcha_key')).lower()
-            if captcha_value != captcha_value_exp:
+            captcha_value = captcha_value.lower()
+            captcha_value_exp = cache.get(necessary_opts_dict.pop('captcha_key'))
+            if not captcha_value_exp or captcha_value != captcha_value_exp.lower():
                 raise CaptchaError()
 
             # 根据类型确定登陆参数，并提取
