@@ -182,7 +182,7 @@ class DAO:
             else:
                 return necessary, extra + senior_extra
 
-    def validate_opts_dict(self, *opts_dicts):
+    def validate_opts_dict(self, **opts_dicts):
         """
         融合请求的信息，校验选项字典的权限合法性，新增对象使用
         :param opts_dicts: 选项字典
