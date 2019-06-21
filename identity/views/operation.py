@@ -246,9 +246,12 @@ class PasswordView(BaseView):
             user.check_password(origin_password)
 
             # user 对象更新
-            password = necessary_opts_dict.pop('password')
-            user.validate_password(password)
-            self.user_model.update_obj(user, updated_by=request.user.uuid)
+            password = user.validate_password(necessary_opts_dict.pop('password'))
+            updated_opts = {
+                'password': password,
+                'updated_by': request.user.uuid
+            }
+            self.user_model.update_obj(user, **updated_opts)
 
             # 获取和失效 token 对象
             user = request.user

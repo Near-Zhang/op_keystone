@@ -42,7 +42,7 @@ class User(ResourceModel):
         创建前，进行密码校验、字段检查
         """
         super().pre_create()
-        self.validate_password()
+        self.password = self.validate_password(self.password)
 
         # 检查 domain 是否存在
         domain_obj = DAO('partition.models.Domain').get_obj(uuid=self.domain)
@@ -123,16 +123,16 @@ class User(ResourceModel):
         if pw_hash != self.password:
             raise PasswordError
 
-    def validate_password(self):
+    def validate_password(self, password):
         """
-        进行密码合法校验，成功则进行加盐哈希，并修改到密码
+        进行密码合法校验，成功则进行加盐哈希并返回
         """
         try:
-            v_password(self.password, self)
+            v_password(password, self)
         except ValidationError as e:
             raise PasswordInvalid(e)
         else:
-            self.password = tools.password_to_hash(self.password)
+            return tools.password_to_hash(password)
 
     @staticmethod
     def get_field_opts(create=True):
