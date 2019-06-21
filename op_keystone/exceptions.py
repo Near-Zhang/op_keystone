@@ -46,7 +46,7 @@ class LoginFailed(CustomException):
     """
     def __init__(self):
         self.code = 403
-        exception_message = 'user does not exist or password is error'
+        exception_message = 'user does not exist or password/phone captcha is error'
         super().__init__(exception_message)
 
 

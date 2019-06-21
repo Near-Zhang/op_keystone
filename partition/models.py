@@ -76,6 +76,7 @@ class Domain(ResourceModel):
         d['group_count'] = DAO('identity.models.Group').get_obj_qs(domain=self.uuid).count()
         d['custom_role_count'] = DAO('assignment.models.Role').get_obj_qs(domain=self.uuid, builtin=False).count()
         d['custom_policy_count'] = DAO('assignment.models.Policy').get_obj_qs(domain=self.uuid, builtin=False).count()
+        d['custom_role_tpl_count'] = DAO('assignment.models.RoleTpl').get_obj_qs(domain=self.uuid, builtin=False).count()
         return d
 
     @staticmethod
