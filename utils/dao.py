@@ -182,20 +182,23 @@ class DAO:
             else:
                 return necessary, extra + senior_extra
 
-    def validate_opts_dict(self, **opts_dicts):
+    def validate_opts_dict(self, *opts_dicts):
         """
         融合请求的信息，校验选项字典的权限合法性，新增对象使用
         :param opts_dicts: 选项字典
         :return: dict, 字段参数字典
         """
+        field_opts = {}
+
         if self.service:
-            return opts_dicts
+            for opts_dict in opts_dicts:
+                field_opts.update(opts_dict)
+            return field_opts
 
         if not self.init_opts_dict:
             raise AttributeError('the attribute init_opts_dict is not set')
 
         # 完整对象字段字典参数合成
-        field_opts = {}
         field_opts.update(self.init_opts_dict)
         for opts_dict in opts_dicts:
             field_opts.update(opts_dict)
