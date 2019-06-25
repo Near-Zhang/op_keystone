@@ -42,15 +42,17 @@ class DAO:
             return
 
         if getattr(request, 'condition_tuple', None):
-            for condition in request.condition_tuple[1]:
-                sub_q = self.parsing_query_str(condition)
-                self.query_obj &= ~sub_q
-
             allow_q = Q()
             for condition in request.condition_tuple[0]:
                 sub_q = self.parsing_query_str(condition)
                 allow_q |= sub_q
-            self.query_obj &= allow_q
+
+            deny_q = Q()
+            for condition in request.condition_tuple[1]:
+                sub_q = self.parsing_query_str(condition)
+                deny_q &= ~sub_q
+
+            self.query_obj = allow_q & deny_q
 
         # 单个域级别需要设置查询限制
         if self.user.level == 3:
