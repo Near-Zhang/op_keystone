@@ -46,13 +46,14 @@ class DAO:
             for condition in request.condition_tuple[0]:
                 sub_q = self.parsing_query_str(condition)
                 allow_q |= sub_q
+            self.query_obj &= allow_q
 
             deny_q = Q()
             for condition in request.condition_tuple[1]:
                 sub_q = self.parsing_query_str(condition)
                 deny_q &= ~sub_q
 
-            self.query_obj = allow_q & deny_q
+            self.query_obj &= deny_q
 
         # 单个域级别需要设置查询限制
         if self.user.level == 3:
@@ -283,6 +284,8 @@ class DAO:
         try:
             return self.model.objects.get(*query_obj, self.query_obj, **kwargs)
         except ObjectDoesNotExist as e:
+            print(query_obj)
+            print(kwargs)
             raise ObjectNotExist(self.model.__name__) from e
 
     def get_obj_qs(self, *query_obj, **kwargs):
