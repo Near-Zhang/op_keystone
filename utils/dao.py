@@ -26,7 +26,8 @@ class DAO:
         self.service = None
         self.query_obj = Q()
         if self.model.get_field('deleted_time'):
-            self.query_obj = Q(deleted_time__isnull=True)
+            valid_datetime = tools.timestamp_to_datetime(0)
+            self.query_obj = Q(deleted_time=valid_datetime)
         self.init_opts_dict = {}
 
     def combine_request(self, request):
@@ -284,8 +285,6 @@ class DAO:
         try:
             return self.model.objects.get(*query_obj, self.query_obj, **kwargs)
         except ObjectDoesNotExist as e:
-            print(query_obj)
-            print(kwargs)
             raise ObjectNotExist(self.model.__name__) from e
 
     def get_obj_qs(self, *query_obj, **kwargs):

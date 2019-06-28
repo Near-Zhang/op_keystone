@@ -16,7 +16,7 @@ import requests
 from requests.exceptions import RequestException
 
 
-def get_datetime_with_tz(datetime_obj=None, **kwargs):
+def get_datetime_with_tz(datetime_obj=None, datetime_tuple=None, **kwargs):
     """
     获取当前 datetime 对象，或者转化指定 datetime 对象到指定时区，也可以进行时间增减
     :param datetime_obj: datetime object
@@ -24,7 +24,10 @@ def get_datetime_with_tz(datetime_obj=None, **kwargs):
     :return: datetime object
     """
     if not datetime_obj:
-        datetime_obj = datetime.now()
+        if datetime_tuple:
+            datetime_obj = datetime(*datetime_tuple)
+        else:
+            datetime_obj = datetime.now()
 
     tz = timezone(settings.TIME_ZONE)
     datetime_with_tz = datetime_obj.astimezone(tz)
@@ -36,7 +39,7 @@ def get_datetime_with_tz(datetime_obj=None, **kwargs):
 
 def datetime_to_humanized(datetime_obj=None):
     """
-    转换 datetime object 为指定时区的人性化显示
+    转换 datetime 对象为指定时区的人性化显示
     :param datetime_obj: datetime object
     :return: str
     """
@@ -55,6 +58,19 @@ def datetime_to_timestamp(datetime_obj=None):
 
     timetuple = datetime_obj.timetuple()
     return time.mktime(timetuple)
+
+
+def timestamp_to_datetime(timestamp=None):
+    """
+    转换时间戳为 datetime object
+    :param timestamp: int, 时间戳
+    :return: datetime object
+    """
+    if timestamp is None or type(timestamp) != int:
+        timestamp = time.time()
+
+    datetime_obj = datetime.fromtimestamp(timestamp)
+    return get_datetime_with_tz(datetime_obj)
 
 
 def password_to_hash(password):

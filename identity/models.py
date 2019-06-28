@@ -35,7 +35,7 @@ class User(ResourceModel):
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
 
     # 软删除字段
-    deleted_time = models.DateTimeField(null=True, verbose_name='删除时间')
+    deleted_time = models.DateTimeField(default=tools.timestamp_to_datetime(0), verbose_name='删除时间')
 
     def pre_create(self):
         """
