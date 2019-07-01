@@ -26,12 +26,13 @@ class Service(ResourceModel):
 
     def post_create(self):
         """
-        创建后，生成一个永久服务 token，通知 channels
+        创建后，生成一个永久服务 token 并返回到响应，，通知 channels
         """
         now = tools.get_datetime_with_tz()
-        access_token = tools.generate_mapping_uuid(self.uuid, tools.datetime_to_humanized(now))
-        DAO('credence.models.Token').create_obj(carrier=self.uuid, token=access_token,
+        service_token = tools.generate_mapping_uuid(self.uuid, tools.datetime_to_humanized(now))
+        DAO('credence.models.Token').create_obj(carrier=self.uuid, token=service_token,
                                                 expire_date=now, type=2)
+        self.service_token = service_token
 
         async_to_sync(channel_layer.group_send)("catalog_notice", {
             'type': 'chat.message',
@@ -56,9 +57,10 @@ class Service(ResourceModel):
 
     def post_delete(self):
         """
-        删除后，，通知 channels
+        删除后，删除服务 token，通知 channels
         :return:
         """
+        DAO('credence.models.Token').delete_obj_qs(carrier=self.uuid, type=2)
         async_to_sync(channel_layer.group_send)("catalog_notice", {
             'type': 'chat.message',
             'notice': 'service_deleted'

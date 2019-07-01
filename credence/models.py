@@ -7,6 +7,7 @@ class Token(BaseModel):
     class Meta:
         verbose_name = 'TOKEN'
         db_table = 'token'
+        unique_together = ('carrier', 'type')
 
     # 必要字段
     carrier = models.CharField(max_length=32, verbose_name='载体UUID')
