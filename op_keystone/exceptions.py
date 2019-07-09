@@ -128,7 +128,7 @@ class RequestParamsError(CustomException):
     """
     从请求中提取的参数有错误
     """
-    def __init__(self, empty=False, not_json=False, opt=None, invalid=None):
+    def __init__(self, empty=False, not_json=False, opt=None, invalid=False):
         self.code = 400
         if empty:
             exception_message = 'request params is empty'

@@ -22,6 +22,8 @@ class Role(ResourceModel):
     builtin = models.BooleanField(default=False, verbose_name='是否内置')
     enable = models.BooleanField(default=True, verbose_name="是否启用")
     comment = models.CharField(max_length=64, null=True, verbose_name='备注')
+    tpl = models.CharField(max_length=32, null=True, verbose_name='使用的模版UUID')
+    tpl_condition_values = models.CharField(max_length=512, null=True, verbose_name='使用的模版条件')
 
     def pre_create(self):
         """
@@ -34,6 +36,8 @@ class Role(ResourceModel):
         else:
             DAO('partition.models.Domain').get_obj(uuid=self.domain)
 
+        self.tpl_condition_values = json_dumper(self.tpl_condition_values)
+
     def pre_update(self):
         """
         更新前，检查 domain 是否存在，以及是否内置
@@ -42,6 +46,8 @@ class Role(ResourceModel):
             self.domain = DAO('partition.models.Domain').get_obj(is_main=True).uuid
         else:
             DAO('partition.models.Domain').get_obj(uuid=self.domain)
+
+        self.tpl_condition_values = json_dumper(self.tpl_condition_values)
 
     def pre_delete(self):
         """
@@ -71,6 +77,16 @@ class Role(ResourceModel):
     @classmethod
     def get_default_query_keys(cls):
         return ['name', 'domain'] + super().get_default_query_keys()
+
+    def serialize(self):
+        """
+        对象序列化，json 解析 tpl_condition_values
+        :return: dict
+        """
+        d = super().serialize()
+        d['tpl_condition_values'] = json_loader(d['tpl_condition_values'])
+
+        return d
 
 
 class Policy(ResourceModel):

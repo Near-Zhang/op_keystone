@@ -112,7 +112,10 @@ USE_TZ = True
 # CORS setting
 CORS_ORIGIN_WHITELIST = (
     'localhost:8080',
-    'op_web.ijunhai.com')
+    'op_web.ijunhai.com',
+    'op-web.ijunhai.com',
+    'op-web-test.ijunhai.com'
+)
 CORS_ALLOW_HEADERS = default_headers + (
     'X-Junhai-Token',
     'Access-Control-Allow-Origin'

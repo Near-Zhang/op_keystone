@@ -1,7 +1,8 @@
 from op_keystone.base_view import BaseView, ResourceView
-from op_keystone.exceptions import CustomException, RoutingParamsError
+from op_keystone.exceptions import CustomException, RoutingParamsError, RequestParamsError
 from utils.dao import DAO
 from ..models import RoleTpl
+from utils.tools import json_loader
 
 
 class RoleTplsView(ResourceView):
@@ -31,6 +32,8 @@ class TplBasedRole(BaseView):
         try:
             # 参数提取
             necessary_opts = ['name', 'role_tpl', 'condition_values']
+            if hasattr(request, "service"):
+                necessary_opts += 'created_by'
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
@@ -43,12 +46,16 @@ class TplBasedRole(BaseView):
             self._role_model.combine_request(request)
             self._action_model.combine_request(request)
 
-            # 模版对象获取
-            role_tpl = self._role_tpl_model.get_obj(uuid=necessary_opts_dict['role_tpl']).serialize()
+            # 参数和模版对象获取
+            tpl_uuid = necessary_opts_dict['role_tpl']
+            condition_values = necessary_opts_dict.get('condition_values')
+            role_tpl = self._role_tpl_model.get_obj(uuid=tpl_uuid).serialize()
 
             # 角色创建
             role_fields = {
-                'name': necessary_opts_dict['name']
+                'name': necessary_opts_dict['name'],
+                'tpl': tpl_uuid,
+                'tpl_condition_values': condition_values
             }
             self._role_model.get_opts(create=True)
             role_opts = self._role_model.validate_opts_dict(role_fields, extra_opts_dict)
@@ -60,9 +67,8 @@ class TplBasedRole(BaseView):
             for a in role_tpl['actions']:
                 condition = None
                 if a.get('enable_condition'):
-                    condition_values = necessary_opts_dict.get('condition_values')
                     if len(condition_values) > 0:
-                        condition = a.get('condition_field') + ':' + '|'.join(necessary_opts_dict['condition_values'])
+                        condition = a.get('condition_field') + ':' + '|'.join(condition_values)
 
                 if a.get('effect') and a.get('effect') in ['allow', 'deny'] :
                     effect = a.get('effect')
@@ -104,11 +110,13 @@ class TplBasedRole(BaseView):
         """
         try:
             # 参数提取
-            necessary_opts = ['role_tpl', 'condition_values']
+            necessary_opts = []
+            if hasattr(request, "service"):
+                necessary_opts += 'created_by'
             request_params = self.get_params_dict(request)
             necessary_opts_dict = self.extract_opts(request_params, necessary_opts)
 
-            extra_opts = ['domain']
+            extra_opts = ['role_tpl', 'condition_values', 'domain']
             extra_opts_dict = self.extract_opts(request_params, extra_opts, necessary=False)
 
             # 结合请求信息，设置 model 查询参数
@@ -125,6 +133,17 @@ class TplBasedRole(BaseView):
             role_obj = self._role_model.get_obj(uuid=uuid)
             self._role_model.validate_obj(role_obj)
 
+            # 模版对象获取
+            role_tpl_uuid = extra_opts_dict.pop('role_tpl', None)
+            if not role_tpl_uuid:
+                role_tpl_uuid = role_obj.tpl
+            role_tpl = self._role_tpl_model.get_obj(uuid=role_tpl_uuid).serialize()
+
+            # 模版条件获取
+            condition_values = extra_opts_dict.pop('condition_values', None)
+            if not condition_values:
+                condition_values = json_loader(role_obj.tpl_condition_values)
+
             # 获取 role 关联 policy 对象的 uuid 列表，删除关联
             del_policy_uuid_list = self._m2m_model.get_field_list('policy', role=uuid)
             self._m2m_model.delete_obj_qs(role=uuid)
@@ -135,17 +154,12 @@ class TplBasedRole(BaseView):
                 if p_obj.role_based_tpl == uuid:
                     self._policy_model.delete_obj(p_obj)
 
-            # 模版对象获取
-            role_tpl = self._role_tpl_model.get_obj(uuid=necessary_opts_dict['role_tpl']).serialize()
-
             # 生成条件，策略创建
             policy_uuid_list = []
             for a in role_tpl['actions']:
                 condition = None
-                if a.get('enable_condition'):
-                    condition_values = necessary_opts_dict.get('condition_values')
-                    if len(condition_values) > 0:
-                        condition = a.get('condition_field') + ':' + '|'.join(necessary_opts_dict['condition_values'])
+                if a.get('enable_condition') and condition_values:
+                    condition = a.get('condition_field') + ':' + '|'.join(condition_values)
 
                 if a.get('effect') and a.get('effect') in ['allow', 'deny']:
                     effect = a.get('effect')
@@ -164,7 +178,7 @@ class TplBasedRole(BaseView):
                     'role_based_tpl': role_obj.uuid
                 }
                 self._policy_model.get_opts(create=True)
-                policy_opts = self._policy_model.validate_opts_dict(policy_fields, extra_opts_dict)
+                policy_opts = self._policy_model.validate_opts_dict(policy_fields, necessary_opts_dict, extra_opts_dict)
                 policy_created = self._policy_model.create_obj(**policy_opts)
                 policy_uuid_list.append(policy_created.uuid)
 
@@ -175,8 +189,17 @@ class TplBasedRole(BaseView):
                     'policy': p
                 })
 
+            # 更新角色
+            role_fields = {
+                'tpl': role_tpl_uuid,
+                'tpl_condition_values': condition_values,
+            }
+            self._role_model.get_opts()
+            role_opts = self._role_model.validate_opts_dict(role_fields, necessary_opts_dict, extra_opts_dict)
+            updated_role_obj = self._role_model.update_obj(role_obj, **role_opts)
+
             # 返回角色信息
-            return self.standard_response(role_obj.serialize())
+            return self.standard_response(updated_role_obj.serialize())
 
         except CustomException as e:
             return self.exception_to_response(e)
@@ -193,6 +216,8 @@ class TplBasedRole(BaseView):
 
             # 保证源对象存在，校验对象权限合法性
             role_obj = self._role_model.get_obj(uuid=uuid)
+            if not role_obj.tpl:
+                raise RequestParamsError(opt="uuid", invalid=True)
             self._role_model.validate_obj(role_obj)
 
             # 获取 role 关联 policy 对象的 uuid 列表，删除关联

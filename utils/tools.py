@@ -91,7 +91,7 @@ def json_dumper(obj):
     :param obj: obj
     :return: json str
     """
-    if not obj:
+    if obj is None:
         return ''
     try:
         return json.dumps(obj)
@@ -105,7 +105,7 @@ def json_loader(json_str):
     :param json_str: str|byte, json 形式
     :return: dict
     """
-    if not json_str:
+    if json_str is None or json_str == "":
         return {}
     try:
         return json.loads(json_str)
