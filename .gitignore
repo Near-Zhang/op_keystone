@@ -18,3 +18,4 @@ migrations
 GeoLite2-City.mmdb
 config.py
 nohup.out
+uwsgi/uwsgi.pid
