@@ -30,6 +30,7 @@ class User(ResourceModel):
 
     # 附加字段
     is_main = models.BooleanField(default=False, verbose_name='是否主用户')
+    title = models.CharField(max_length=2048, null=True, verbose_name='头衔')
     enable = models.BooleanField(default=True, verbose_name='是否可用')
     qq = models.CharField(max_length=16, null=True, verbose_name='QQ')
     comment = models.CharField(max_length=256, null=True, verbose_name='备注')
@@ -142,7 +143,7 @@ class User(ResourceModel):
         """
         necessary = ['username', 'password', 'name',
                      'email', 'phone']
-        extra = ['qq', 'comment', 'enable']
+        extra = ['qq', 'title', 'comment', 'enable']
         senior_extra = ['domain', 'is_main']
 
         if create:
@@ -154,7 +155,7 @@ class User(ResourceModel):
     @classmethod
     def get_default_query_keys(cls):
         return ['username', 'name', 'email',
-                'phone', 'domain'] + super().get_default_query_keys()
+                'phone', 'domain', 'title'] + super().get_default_query_keys()
 
 
 class UserBehavior(BaseModel):
