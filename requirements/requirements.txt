@@ -6,5 +6,5 @@ Pillow==5.4.1
 django-redis==4.10.0
 channels==2.2.0
 channels_redis==2.4.0
-uwsgi==2.0.18
+uwsgi==2.0.22
 daphne>=2.3.0
